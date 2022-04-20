@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+#![feature(panic_info_message)]
 
 // #[macro_use] 的作用是在 mod 作用域结束时依然可以使用 macro，
 // 或者引入其他 crate 的 marcos。
@@ -19,9 +20,8 @@ global_asm!(include_str!("entry.asm"));
 fn rust_main() -> ! {
     clear_bss();
 
-    sbi::console_putchar(65);
-
-    loop {}
+    println!("Hello, world!");
+    panic!("Shutdown machine!")
 }
 
 fn clear_bss() {
