@@ -11,13 +11,26 @@ OS_BIN_OUTPUT := $(TARGET_DIR)/$(RUST_TARGET)/release/os.bin
 
 build: $(OS_OUTPUT) $(OS_BIN_OUTPUT)
 
-qemu: $(OS_BIN_OUTPUT)
+.PHONY: \
+	qemu-gdb \
+	qemu
+
+# If you want to terminate the QEMU, please
+# press `ctrl + A, X`.
+qemu-gdb: $(OS_OUTPUT) $(OS_BIN_OUTPUT)
 	@qemu-system-riscv64 \
 		-machine virt \
 		-nographic \
 		-bios $(QEMU_BOOTLOADER) \
-		-device loader,file=$<,addr=0x80200000 \
+		-device loader,file=$(OS_BIN_OUTPUT),addr=0x80200000 \
 		-s -S
+
+qemu: $(OS_OUTPUT) $(OS_BIN_OUTPUT)
+	@qemu-system-riscv64 \
+		-machine virt \
+		-nographic \
+		-bios $(QEMU_BOOTLOADER) \
+		-device loader,file=$(OS_BIN_OUTPUT),addr=0x80200000
 
 gdb: $(OS_OUTPUT)
 	@riscv64-unknown-elf-gdb \

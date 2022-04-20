@@ -1,7 +1,14 @@
 #![no_std]
 #![no_main]
 
+// #[macro_use] 的作用是在 mod 作用域结束时依然可以使用 macro，
+// 或者引入其他 crate 的 marcos。
+// Ref: https://doc.rust-lang.org/reference/macros-by-example.html#the-macro_use-attribute
+#[macro_use]
+
+mod console;
 mod lang_items;
+mod sbi;
 
 use core::arch::global_asm;
 // TODO(justxuewei): 在 rust 里加载 asm 的意义是什么？
@@ -11,6 +18,9 @@ global_asm!(include_str!("entry.asm"));
 #[no_mangle]
 fn rust_main() -> ! {
     clear_bss();
+
+    sbi::console_putchar(65);
+
     loop {}
 }
 
