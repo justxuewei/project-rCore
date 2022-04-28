@@ -6,6 +6,11 @@ const SYSCALL_EXIT: usize = 93;
 fn syscall(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
     unsafe {
+        // x10-x17: a0-a7 表示的是 ecall 命令的参数寄存器，
+        // RISC-V 规定 x17 寄存器传递的是 syscall ID，同时
+        // x10 寄存器还保存 ecall 的返回值。
+        // QUESTION(justxuewei): 看起来入参只能有 7 个，
+        // 如果多于 7 个应该怎么办？
         asm!(
             "ecall",
             inlateout("x10") args[0] => ret,

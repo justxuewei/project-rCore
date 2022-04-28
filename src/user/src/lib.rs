@@ -19,6 +19,9 @@ pub extern "C" fn _start() {
 
 #[no_mangle]
 #[linkage = "weak"]
+// 这里 weak 是告诉 linker 这个 main 是可以被
+// 其他 main 函数覆盖的，这里加一个 main 主要是
+// 为了防止 bin 中缺失 main 函数导致编译失败。
 fn main() -> i32 {
     panic!("Cannot find main!");
 }

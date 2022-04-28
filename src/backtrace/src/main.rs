@@ -4,7 +4,7 @@ use core::arch::asm;
 
 // Refs: 
 // 1. [Backtrace] https://techno-coder.github.io/example_os/2018/06/04/A-stack-trace-for-your-OS.html 
-// 2. [Names of rigsters] http://tianyu-code.top/%E6%B1%87%E7%BC%96/%E5%AF%84%E5%AD%98%E5%99%A8%E4%BB%8B%E7%BB%8D/
+// 2. [Names of registers] http://tianyu-code.top/%E6%B1%87%E7%BC%96/%E5%AF%84%E5%AD%98%E5%99%A8%E4%BB%8B%E7%BB%8D/
 // 3. [asm marco] https://doc.rust-lang.org/nightly/reference/inline-assembly.html
 fn main() {
     function_a();

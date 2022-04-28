@@ -1,8 +1,9 @@
 use super::write;
-use core::fmt::{self, Write}
+use core::fmt::{self, Write};
 
 struct Stdout;
 
+// standard output (screen)
 const STDOUT: usize = 1;
 
 impl Write for Stdout {
