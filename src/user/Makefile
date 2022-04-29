@@ -11,11 +11,16 @@ OBJCOPY := rust-objcopy --binary-architecture=riscv64
 
 elf:
 	@cargo build --release
-	@echo APPS=$(APPS)
-	@echo ELFS=$(ELFS)
-	@echo BINS=$(BINS)
+	@echo "==> APPS"
+	@echo $(APPS)
+	@echo "==> ELFS"
+	@echo $(ELFS)
+	@echo "==> BINS"
+	@echo $(BINS)
 
 binary: elf
-	$(foreach elf, $(ELFS), $(OBJCOPY) $(elf) --strip-all -O binary $(patsubst $(TARGET_DIR)/%, $(TARGET_DIR)/%.bin, $(elf));)
+	@$(foreach elf, $(ELFS), $(OBJCOPY) $(elf) --strip-all -O binary $(patsubst $(TARGET_DIR)/%, $(TARGET_DIR)/%.bin, $(elf));)
+
+.PHONY: build
 
 build: binary
