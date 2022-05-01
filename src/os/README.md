@@ -1,8 +1,10 @@
-# rCore
+# rCore: An OS Running on RISC-V
 
-## 编译脚本
+这篇文章补充 [rCore-Tutorial-Book-v3](https://rcore-os.github.io/rCore-Tutorial-Book-v3/index.html) 中没有介绍到的知识，这些知识大部分来自于汇编、编译器等内容。
 
-已有的内容请参阅 [调整内核的内存布局](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter1/4first-instruction-in-kernel2.html#id4)，这里主要补充下我没有看懂的地方。
+## Linker Script
+
+链接器的作用是将不同的目标文件链接起来变成一个真正可执行的文件，一般称为 ELF (Executable and Linkable File)。已有的内容请参阅 [调整内核的内存布局](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter1/4first-instruction-in-kernel2.html#id4)，这里主要补充下原文中没有提到的部分。
 
 此外还有一些个人理解：
 
@@ -10,15 +12,15 @@
 
 ## sxx, exx 表示的含义
 
-```
-// -- snip --
-skernel = .;
-// -- snip --
-ekernel = .;
-// -- snip --
-```
+这里只是原作者的一种命名方式，参见 Assembly > .globl。`skernel` 和 `ekernel` 分别表示 kernel 开始的地方和结束的地方，因为 `.` 表示当前地址，所以这个变量表示的就是他们的起始地址，这里其他的 `s<x>` 和 `e<x>` 都是同理。
 
-我理解这里的 `skernel` 和 `ekernel` 分别表示 kernel 开始的地方和结束的地方，因为 `.` 表示当前地址，所以这个变量表示的就是他们的起始地址，这里其他的 `s<x>` 和 `e<x>` 都是同理。
+```
+/* -- snip -- */
+skernel = .;
+/* -- snip -- */
+ekernel = .;
+/* -- snip -- */
+```
 
 ### 如何生成一个段
 
@@ -40,13 +42,7 @@ ekernel = .;
 .text.*             // o2
 ```
 
-### ALIGN 关键词
-
-Ref: https://zhuanlan.zhihu.com/p/383729996
-
-执行的是对齐指令，这里不再详述。
-
-## 汇编
+## Assembly
 
 ### .globl
 
@@ -99,3 +95,7 @@ Refs:
 ### .space
 
 .space 表示内存布局预留空间，`.space 4096 * 16` 表示预留 64KB 空间。
+
+### .align
+
+对齐指令，在 riscv 中 .align == .p2align，比如 .align 3 可以理解为与 8 对齐，也就是填充一堆 0 直到当前地址可以整除 8，可以参考 [.p2align](https://sourceware.org/binutils/docs/as/P2align.html#P2align)。

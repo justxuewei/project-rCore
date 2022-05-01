@@ -1,11 +1,57 @@
 use core::arch::asm;
 use core::slice;
+use lazy_static::*;
 
 use crate::sync::UPSafeCell;
+use crate::trap::TrapContext;
 
+const USER_STACK_SIZE: usize = 4096 * 2;
+const KERNEL_STACK_SIZE: usize = 4096 * 2;
 const MAX_APP_NUM: usize = 16;
 const APP_BASE_ADDRESS: usize = 0x80400000;
 const APP_SIZE_LIMIT: usize = 0x20000;
+
+// 这里是指操作内存布局以 4096 (4Kb) 为单位对齐，
+// 但是 data 的长度为 8Kb，已经超过了 4Kb，那么这个对齐还有作用吗？
+#[repr(align(4096))]
+struct KernelStack {
+    data: [u8; KERNEL_STACK_SIZE],
+}
+
+#[repr(align(4096))]
+struct UserStack {
+    data: [u8; USER_STACK_SIZE],
+}
+
+static KERNEL_STACK: KernelStack = KernelStack {
+    data: [0; KERNEL_STACK_SIZE],
+};
+static USER_STACK: UserStack = UserStack {
+    data: [0; USER_STACK_SIZE],
+};
+
+impl UserStack {
+    // 在 RISC-V 中 stack 都是向下增长的，比如 [|||||] 表示一个栈，
+    // 左边是低地址 L，右边是高地址 H，那么栈底是在右边，即 sp == H，
+    // self.data 的首地址 == L。
+    fn get_sp(&self) -> usize {
+        self.data.as_ptr() as usize + USER_STACK_SIZE
+    }
+}
+
+impl KernelStack {
+    fn get_sp(&self) -> usize {
+        self.data.as_ptr() as usize + KERNEL_STACK_SIZE
+    }
+
+    pub fn push_context(&self, cx: TrapContext) -> &'static mut TrapContext {
+        let cx_ptr = (self.get_sp() - core::mem::size_of::<TrapContext>()) as *mut TrapContext;
+        unsafe {
+            *cx_ptr = cx;
+        }
+        unsafe { cx_ptr.as_mut().unwrap() }
+    }
+}
 
 struct AppManager {
     num_app: usize,
