@@ -99,3 +99,41 @@ Refs:
 ### .align
 
 对齐指令，在 riscv 中 .align == .p2align，比如 .align 3 可以理解为与 8 对齐，也就是填充一堆 0 直到当前地址可以整除 8，可以参考 [.p2align](https://sourceware.org/binutils/docs/as/P2align.html#P2align)。
+
+### .altmacro & .rept
+
+.altmacro 的作用是启动 alternate macro 模式，参考 [How to get the value of a variable in a macro argument](https://stackoverflow.com/questions/35214474/how-to-get-the-value-of-a-variable-in-a-macro-argument)，可以使用 `%expr` 获取表达式的值。
+
+.rept 的作用是重复语句，可以参考 [.rept count](http://web.mit.edu/rhel-doc/3/rhel-as-en-3/rept.html)。
+
+```
+.set n, 5
+.rept 27
+    SAVE_GP %n
+    .set n, n+1
+.endr
+```
+
+就可以等效为如下汇编代码：
+
+```
+SAVE_GP 5
+SAVE_GP 6
+// ...
+SAVE_GP 32
+```
+
+### .add & .addi & .sd
+
+在 ch2 的 trap.S 中 addi 和 sd 指令是一起使用的，因此将这两个指令一起介绍。
+
+add 和 addi 顾名思义都是做加法运算的，add 的两个加数是存放在寄存器中，addi 的一个加数存放在寄存器中，另一个加数是立即数。对于指令 add rd, rs, rt 可以表示为 rs + rt -> rd，对于指令 addi rd, rt, immediate 可以表示为 rt + immediate -> rd。
+
+sd 是 store doubleword 的含义，与之相似的还有 sb = store byte、sh = store halfword 以及 sw = store word，其中 byte = 1 byte、halfword = 2 bytes、word = 4 bytes 以及 doubleword = 8 bytes。
+
+addi 和 sd 之间的组合可以用于操作栈，如下面的汇编代码，具体含义如右边注释所示。
+
+```
+addi sp, sp, -34*8 # 开辟 8 * 34 bytes 空间，栈的增长是自高地址向低地址的
+sd x1, 1*8(sp) # 将 x1 寄存器数据存到栈的第一个位置中
+```
