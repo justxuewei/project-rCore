@@ -23,6 +23,7 @@ struct UserStack {
     data: [u8; USER_STACK_SIZE],
 }
 
+// KERNEL_STACK 用于保存 
 static KERNEL_STACK: KernelStack = KernelStack {
     data: [0; KERNEL_STACK_SIZE],
 };
@@ -44,6 +45,7 @@ impl KernelStack {
         self.data.as_ptr() as usize + KERNEL_STACK_SIZE
     }
 
+    // push_context 将 TrapContext 压入 KernelStack 并返回该 TrapContext
     pub fn push_context(&self, cx: TrapContext) -> &'static mut TrapContext {
         let cx_ptr = (self.get_sp() - core::mem::size_of::<TrapContext>()) as *mut TrapContext;
         unsafe {
@@ -72,6 +74,8 @@ impl AppManager {
         }
     }
 
+    // load_app 主要的作用是将一个 user application 从代码段复制到 APP_BASE_ADDRESS
+    // 位置，让 user application 处于待执行状态。
     unsafe fn load_app(&self, app_id: usize) {
         if app_id >= self.num_app {
             panic!("All applications completed!");
@@ -103,6 +107,7 @@ lazy_static! {
             extern "C" {
                 fn _num_app();
             }
+            // 从 link_app.S 加载各个应用程序的在内存中的位置，同时初始化 AppManager
             let num_app_ptr = _num_app as usize as *const usize;
             let num_app = num_app_ptr.read_volatile();
             let mut app_start: [usize; MAX_APP_NUM + 1] = [0; MAX_APP_NUM + 1];
@@ -125,7 +130,24 @@ pub fn print_app_info() {
     APP_MANAGER.exclusive_access().print_app_info();
 }
 
-// TODO(justxuewei): waiting for kernel implementation
 pub fn run_next_app() -> ! {
-    
+    let mut app_manager = APP_MANAGER.exclusive_access();
+    let current_app = app_manager.get_current_app();
+    unsafe {
+        app_manager.load_app(current_app);
+    }
+    app_manager.move_to_next_app();
+    drop(app_manager);
+
+    extern "C" {
+        fn __restore(cx_addr: usize);
+    }
+    unsafe {
+        __restore(KERNEL_STACK.push_context(TrapContext::app_init_context(
+            APP_BASE_ADDRESS,
+            USER_STACK.get_sp(),
+        )) as *const _ as usize)
+    }
+
+    panic!("Unreachable in batch::run_next_app!");
 }

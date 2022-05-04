@@ -6,26 +6,32 @@
 // 或者引入其他 crate 的 marcos。
 // Ref: https://doc.rust-lang.org/reference/macros-by-example.html#the-macro_use-attribute
 #[macro_use]
-
 mod console;
+pub mod batch;
 mod lang_items;
 mod sbi;
+mod sync;
+pub mod syscall;
+pub mod trap;
 
 use core::arch::global_asm;
-// TODO(justxuewei): 在 rust 里加载 asm 的意义是什么？
-// load entry.asm
+
+// load entry.asm：让 RustSBI 知道 rCore 的入口函数是 rust_main
 global_asm!(include_str!("entry.asm"));
+// 将用户程序链接到操作系统中
+global_asm!(include_str!("link_app.S"));
 
 #[no_mangle]
 fn rust_main() -> ! {
     clear_bss();
 
-    println!("Hello, world!");
-    panic!("Shutdown machine!")
+    println!("[kernel] Welcome to rCore!");
+    trap::init();
+    batch::init();
+    batch::run_next_app();
 }
 
 fn clear_bss() {
-    // TODO(justxuewei): sbss 和 ebss 这两个函数是在哪定义的？
     extern "C" {
         fn sbss();
         fn ebss();

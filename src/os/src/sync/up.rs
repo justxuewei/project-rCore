@@ -17,7 +17,7 @@ impl<T> UPSafeCell<T> {
     // 必须使用 unsafe。
     pub unsafe fn new(value: T) -> Self {
         Self {
-            inner: RefCell<T>::new(value),
+            inner: RefCell::new(value),
         }
     }
 
