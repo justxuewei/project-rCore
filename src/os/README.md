@@ -2,6 +2,37 @@
 
 这篇文章补充 [rCore-Tutorial-Book-v3](https://rcore-os.github.io/rCore-Tutorial-Book-v3/index.html) 中没有介绍到的知识，这些知识大部分来自于汇编、编译器等内容。
 
+## Basic Concepts
+
+### Stack
+
+栈是一块连续的内存区域，risc-v 中是由高地址向低地址增长的，栈顶是可以执行出栈、入栈操作的，栈底不能执行任何操作，sp 寄存器指向的是栈顶，fp 寄存器指向的是栈底。
+
+### Registers on RISC-V
+
+Ref: https://zhuanlan.zhihu.com/p/295439950
+
+| Register | ABI Name | Desc | Saver |
+| - | - | - | - |
+| x0 | zero | Hard-wired zero | - |
+| x1 | ra | Return address | Caller |
+| x2 | sp | Stack Pointer | Callee |
+| x5-x7 | t0-t2 | Temporaries | Caller |
+
+### Debug with GDB
+
+[rCore GDB 基础教程](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter1/4first-instruction-in-kernel2.html)
+
+- x/10i 0x80000000 : 显示 0x80000000 处的10条汇编指令。
+- x/10i $pc : 显示即将执行的10条汇编指令。
+- x/10xw 0x80000000 : 显示 0x80000000 处的10条数据，格式为16进制32bit。
+- info register: 显示当前所有寄存器信息。
+- info r t0: 显示 t0 寄存器的值。
+- break funcname: 在目标函数第一条指令处设置断点。
+- break *0x80200000: 在 0x80200000 处设置断点。
+- continue: 执行直到碰到断点。
+- si: 单步执行一条汇编指令。
+
 ## Linker Script
 
 链接器的作用是将不同的目标文件链接起来变成一个真正可执行的文件，一般称为 ELF (Executable and Linkable File)。已有的内容请参阅 [调整内核的内存布局](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter1/4first-instruction-in-kernel2.html#id4)，这里主要补充下原文中没有提到的部分。

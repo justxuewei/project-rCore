@@ -13,6 +13,7 @@ mod sbi;
 mod sync;
 pub mod syscall;
 pub mod trap;
+mod stack_trace;
 
 use core::arch::global_asm;
 
@@ -31,6 +32,7 @@ fn rust_main() -> ! {
     batch::run_next_app();
 }
 
+// clear_bss 初始化除了 kernel stack 以外的 .bss 区域
 fn clear_bss() {
     extern "C" {
         fn sbss();

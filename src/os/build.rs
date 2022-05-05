@@ -28,8 +28,7 @@ fn insert_app_data() -> Result<()> {
 
     writeln!(
         f,
-        r#"
-    .align 3
+        r#"    .align 3
     .section .data
     .global _num_app
 _num_app:

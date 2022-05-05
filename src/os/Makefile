@@ -10,12 +10,13 @@ OS_OUTPUT := $(TARGET_DIR)/$(RUST_TARGET)/release/os
 OS_BIN_OUTPUT := $(TARGET_DIR)/$(RUST_TARGET)/release/os.bin
 
 build: $(OS_OUTPUT) $(OS_BIN_OUTPUT)
-
 run: qemu
+build-and-run: clean run
+debug: qemu-gdb
 
 # If you want to terminate the QEMU, please
 # press `ctrl + A, X`.
-qemu-gdb: clean $(OS_OUTPUT) $(OS_BIN_OUTPUT)
+qemu-gdb: $(OS_OUTPUT) $(OS_BIN_OUTPUT)
 	@qemu-system-riscv64 \
 		-machine virt \
 		-nographic \
@@ -23,14 +24,14 @@ qemu-gdb: clean $(OS_OUTPUT) $(OS_BIN_OUTPUT)
 		-device loader,file=$(OS_BIN_OUTPUT),addr=0x80200000 \
 		-s -S
 
-qemu: clean $(OS_OUTPUT) $(OS_BIN_OUTPUT)
+qemu: $(OS_OUTPUT) $(OS_BIN_OUTPUT)
 	@qemu-system-riscv64 \
 		-machine virt \
 		-nographic \
 		-bios $(QEMU_BOOTLOADER) \
 		-device loader,file=$(OS_BIN_OUTPUT),addr=0x80200000
 
-gdb: clean $(OS_OUTPUT)
+gdb: $(OS_OUTPUT)
 	@riscv64-unknown-elf-gdb \
 		-ex "file $(OS_OUTPUT)" \
 		-ex "set arch riscv:rv64" \
@@ -48,4 +49,4 @@ $(OS_BIN_OUTPUT): $(OS_OUTPUT)
 	clean
 
 clean: 
-	@rm -rf $(TARGET_DIR)
+	@cargo clean
