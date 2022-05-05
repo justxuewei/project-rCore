@@ -27,3 +27,10 @@ VSCode configs for riscv64 target to avoid `#![no_std]` warning.
     "rust-analyzer.checkOnSave.allTargets": false
 }
 ```
+
+Recommended extensions for VSCode
+
+- rust-analyzer
+- GitLens
+- RISC-V Support
+- Markdown All in One
