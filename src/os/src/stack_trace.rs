@@ -1,4 +1,4 @@
-use core::{arch::asm, ptr};
+use core::{arch::asm};
 
 // riscv 函数内存模型结构详见
 // https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter1/5support-func-call.html
