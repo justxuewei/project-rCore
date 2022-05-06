@@ -91,14 +91,14 @@ impl AppManager {
         app_dst.copy_from_slice(app_src);
     }
 
-    unsafe fn get_app_name(&self, app_id: usize) -> &str {
+    unsafe fn get_app_name(&self, app_id: usize) -> &'static str {
         if app_id >= self.num_app {
             panic!("App not found!");
         }
 
         let app_name_raw = slice::from_raw_parts(
-            self.app_name_start[app_id - 1] as *const u8,
-            self.app_name_start[app_id] - self.app_name_start[app_id - 1],
+            self.app_name_start[app_id] as *const u8,
+            self.app_name_start[app_id + 1] - self.app_name_start[app_id],
         );
 
         core::str::from_utf8(app_name_raw).unwrap()
