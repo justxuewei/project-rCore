@@ -17,13 +17,13 @@ VSCode configs for riscv64 target to avoid `#![no_std]` warning.
 // ref: https://github.com/rust-lang/vscode-rust/issues/729
 // for rust extenstion:
 {
-    "rust.target": "thumbv7em-none-eabihf",
+    "rust.target": "riscv64gc-unknown-none-elf",
     "rust.all_targets": false
 }
 
 // for rust-analyzer extenstion:
 {
-    "rust-analyzer.cargo.target": "thumbv7em-none-eabihf",
+    "rust-analyzer.cargo.target": "riscv64gc-unknown-none-elf",
     "rust-analyzer.checkOnSave.allTargets": false
 }
 ```

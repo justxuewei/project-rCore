@@ -1,5 +1,4 @@
-use core::arch::asm;
-use core::slice;
+use core::{arch::asm, slice, str};
 use lazy_static::*;
 
 use crate::sync::UPSafeCell;
@@ -23,7 +22,7 @@ struct UserStack {
     data: [u8; USER_STACK_SIZE],
 }
 
-// KERNEL_STACK 用于保存 
+// KERNEL_STACK 用于保存
 static KERNEL_STACK: KernelStack = KernelStack {
     data: [0; KERNEL_STACK_SIZE],
 };
@@ -59,6 +58,7 @@ struct AppManager {
     num_app: usize,
     current_app: usize,
     app_start: [usize; MAX_APP_NUM + 1],
+    app_name_start: [usize; MAX_APP_NUM + 1],
 }
 
 impl AppManager {
@@ -91,6 +91,19 @@ impl AppManager {
         app_dst.copy_from_slice(app_src);
     }
 
+    unsafe fn get_app_name(&self, app_id: usize) -> &str {
+        if app_id >= self.num_app {
+            panic!("App not found!");
+        }
+
+        let app_name_raw = slice::from_raw_parts(
+            self.app_name_start[app_id - 1] as *const u8,
+            self.app_name_start[app_id] - self.app_name_start[app_id - 1],
+        );
+
+        core::str::from_utf8(app_name_raw).unwrap()
+    }
+
     pub fn get_current_app(&self) -> usize {
         self.current_app
     }
@@ -106,6 +119,7 @@ lazy_static! {
         UPSafeCell::new({
             extern "C" {
                 fn _num_app();
+                fn _num_app_name();
             }
             // 从 link_app.S 加载各个应用程序的在内存中的位置，同时初始化 AppManager
             let num_app_ptr = _num_app as usize as *const usize;
@@ -113,10 +127,18 @@ lazy_static! {
             let mut app_start: [usize; MAX_APP_NUM + 1] = [0; MAX_APP_NUM + 1];
             let app_start_raw: &[usize] = slice::from_raw_parts(num_app_ptr.add(1), num_app + 1);
             app_start[..=num_app].copy_from_slice(app_start_raw);
+
+            let num_app_name_ptr = _num_app_name as usize as *const usize;
+            let num_app_name = num_app_name_ptr.read_volatile();
+            let mut app_name_start: [usize; MAX_APP_NUM + 1] = [0; MAX_APP_NUM + 1];
+            let app_name_start_raw: &[usize] = slice::from_raw_parts(num_app_name_ptr.add(1), num_app_name + 1);
+            app_name_start[..=num_app_name].copy_from_slice(app_name_start_raw);
+
             AppManager {
                 num_app,
                 current_app: 0,
                 app_start,
+                app_name_start,
             }
         })
     };
@@ -150,4 +172,13 @@ pub fn run_next_app() -> ! {
     }
 
     panic!("Unreachable in batch::run_next_app!");
+}
+
+pub unsafe fn current_app_info() -> (usize, &'static str) {
+    let app_manager = APP_MANAGER.exclusive_access();
+    let app_id = app_manager.get_current_app() - 1;
+    let app_name = app_manager.get_app_name(app_id);
+    drop(app_manager);
+
+    (app_id, app_name)
 }
