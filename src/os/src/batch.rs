@@ -1,5 +1,7 @@
 use core::{arch::asm, slice, str};
+
 use lazy_static::*;
+use embedded_time::Instant;
 
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
@@ -52,6 +54,11 @@ impl KernelStack {
         }
         unsafe { cx_ptr.as_mut().unwrap() }
     }
+}
+
+struct AppInfo {
+    syscall_ids: &'static [usize],
+    // started_time: 
 }
 
 struct AppManager {

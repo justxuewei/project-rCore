@@ -14,8 +14,14 @@ mod sync;
 pub mod syscall;
 pub mod trap;
 mod stack_trace;
+mod clock;
 
 use core::arch::global_asm;
+
+use embedded_time::{
+    Clock,
+    duration::Seconds,
+};
 
 // load entry.asm：让 RustSBI 知道 rCore 的入口函数是 rust_main
 global_asm!(include_str!("entry.asm"));
@@ -25,6 +31,20 @@ global_asm!(include_str!("link_app.S"));
 #[no_mangle]
 fn rust_main() -> ! {
     clear_bss();
+
+    let instant1 = clock::SysClock.try_now().unwrap();
+    let mut count: usize = 0;
+    (0..1000000000).for_each(|i| {
+        (0..1000000000).for_each(|j| {
+            (0..1000000000).for_each(|k| {
+                count += 1;
+            });
+        });
+    });
+    let instant2 = clock::SysClock.try_now().unwrap();
+    let diff = instant2.checked_duration_since(&instant1).unwrap();
+    let secs: Result<Seconds<u32>, _> = diff.try_into();
+    println!("secs: {:?}", secs.unwrap());
 
     println!("[kernel] Welcome to rCore!");
     trap::init();

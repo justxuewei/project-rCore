@@ -168,3 +168,9 @@ addi 和 sd 之间的组合可以用于操作栈，如下面的汇编代码，�
 addi sp, sp, -34*8 # 开辟 8 * 34 bytes 空间，栈的增长是自高地址向低地址的
 sd x1, 1*8(sp) # 将 x1 寄存器数据存到栈的第一个位置中
 ```
+
+## System Clock
+
+在 ch2-exercise4 中需要确定一个函数的执行时间，本来在有 OS 的基础上可以很容易借助内置的 std 包获取当前时间，在函数结束的时候与开始时间相减就可以了。但是在 no_std 环境下没有任何可用的系统时间，所以就导致大部分 crate 无法使用，经过调研选用 `embedding_time`，[API reference](https://docs.rs/embedded-time/latest/embedded_time/)。
+
+
