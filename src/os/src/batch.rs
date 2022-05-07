@@ -1,7 +1,7 @@
 use core::{arch::asm, slice, str};
 
 use lazy_static::*;
-use embedded_time::Instant;
+use riscv::register as riscvreg;
 
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
@@ -9,6 +9,8 @@ use crate::trap::TrapContext;
 const USER_STACK_SIZE: usize = 4096 * 2;
 const KERNEL_STACK_SIZE: usize = 4096 * 2;
 const MAX_APP_NUM: usize = 16;
+// SYSCALL_LIMIT sets the maximum number of syscalls per application.
+const SYSCALL_LIMIT: usize = 1024;
 const APP_BASE_ADDRESS: usize = 0x80400000;
 const APP_SIZE_LIMIT: usize = 0x20000;
 
@@ -57,8 +59,27 @@ impl KernelStack {
 }
 
 struct AppInfo {
-    syscall_ids: &'static [usize],
-    // started_time: 
+    syscall_ids_idx: usize,
+    syscall_ids: [usize; SYSCALL_LIMIT],
+    started_time: usize,
+}
+
+impl AppInfo {
+    fn reset(&mut self) {
+        self.syscall_ids_idx = 0;
+        self.started_time = 0;
+    }
+
+    fn stat_syscalls(&self, syscall_slot: &mut [i32]) {
+        (0..self.syscall_ids_idx).for_each(|i| {
+            syscall_slot[self.syscall_ids[i]] += 1;
+        });
+    }
+
+    fn record_syscall(&mut self, syscall_id: &usize) {
+        self.syscall_ids[self.syscall_ids_idx] = *syscall_id;
+        self.syscall_ids_idx += 1;
+    }
 }
 
 struct AppManager {
@@ -66,6 +87,7 @@ struct AppManager {
     current_app: usize,
     app_start: [usize; MAX_APP_NUM + 1],
     app_name_start: [usize; MAX_APP_NUM + 1],
+    app_info: AppInfo,
 }
 
 impl AppManager {
@@ -146,6 +168,11 @@ lazy_static! {
                 current_app: 0,
                 app_start,
                 app_name_start,
+                app_info: AppInfo {
+                    syscall_ids_idx: 0,
+                    syscall_ids: [0; SYSCALL_LIMIT],
+                    started_time: 0,
+                },
             }
         })
     };
@@ -159,9 +186,23 @@ pub fn print_app_info() {
     APP_MANAGER.exclusive_access().print_app_info();
 }
 
+pub fn stat_syscall(syscall_slot: &mut [i32]) {
+    APP_MANAGER.exclusive_access().app_info.stat_syscalls(syscall_slot);
+}
+
+pub fn app_running_time() -> usize {
+    riscvreg::time::read() - APP_MANAGER.exclusive_access().app_info.started_time
+}
+
+pub fn record_syscall(syscall_id: &usize) {
+    APP_MANAGER.exclusive_access().app_info.record_syscall(syscall_id)
+}
+
 pub fn run_next_app() -> ! {
     let mut app_manager = APP_MANAGER.exclusive_access();
     let current_app = app_manager.get_current_app();
+    app_manager.app_info.reset();
+    app_manager.app_info.started_time = riscvreg::time::read();
     unsafe {
         app_manager.load_app(current_app);
     }
