@@ -40,3 +40,4 @@ Recommended extensions for VSCode
 - GitLens
 - RISC-V Support
 - Markdown All in One
+- Makefile Tools

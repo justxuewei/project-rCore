@@ -15,6 +15,9 @@ pub mod syscall;
 pub mod trap;
 mod stack_trace;
 
+mod config;
+mod loader;
+
 use core::arch::global_asm;
 
 // load entry.asm：让 RustSBI 知道 rCore 的入口函数是 rust_main
