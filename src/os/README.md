@@ -20,7 +20,9 @@
     - [.space](#space)
     - [.align](#align)
     - [.altmacro & .rept](#altmacro--rept)
-    - [.add & .addi & .sd](#add--addi--sd)
+    - [.add & .addi & .sd & .ld](#add--addi--sd--ld)
+  - [Q&A](#qa)
+    - [为什么 trap 保存 x1-x31 全部寄存器，而 switch 只保存 callee saved registers？](#为什么-trap-保存-x1-x31-全部寄存器而-switch-只保存-callee-saved-registers)
 
 ## Basic Concepts
 
@@ -38,6 +40,17 @@ Ref: https://zhuanlan.zhihu.com/p/295439950
 | x1 | ra | Return address | Caller |
 | x2 | sp | Stack Pointer | Callee |
 | x5-x7 | t0-t2 | Temporaries | Caller |
+| x8 | s0/fp | Saved register/frame pointer | Callee |
+| x9 | s1 | Saved register | Callee |
+| x10-x11 | a0-a1 | Function arguments/return values | Caller |
+| x12-x17 | a2-a7 | Function arguments | Caller |
+| x18-x27 | s2-s11 | Saved registers | Callee |
+| x28-x31 | t3-t6 | Temporaries | Caller |
+
+其中有以下结论：
+
+- RA 寄存器存储的是函数返回后执行的下一条指令的地址，a0-a1 寄存器存储的是返回值，这是两个不同的概念。
+- Callee saved registers 在函数调用的时候会保存，caller saved registers 在函数调用的时候不会被保存。
 
 ### Debug with GDB
 
@@ -206,13 +219,13 @@ SAVE_GP 6
 SAVE_GP 32
 ```
 
-### .add & .addi & .sd
+### .add & .addi & .sd & .ld
 
 在 ch2 的 trap.S 中 addi 和 sd 指令是一起使用的，因此将这两个指令一起介绍。
 
-add 和 addi 顾名思义都是做加法运算的，add 的两个加数是存放在寄存器中，addi 的一个加数存放在寄存器中，另一个加数是立即数。对于指令 add rd, rs, rt 可以表示为 rs + rt -> rd，对于指令 addi rd, rt, immediate 可以表示为 rt + immediate -> rd。
-
-sd 是 store doubleword 的含义，与之相似的还有 sb = store byte、sh = store halfword 以及 sw = store word，其中 byte = 1 byte、halfword = 2 bytes、word = 4 bytes 以及 doubleword = 8 bytes。
+- add 和 addi 顾名思义都是做加法运算的，add 的两个加数是存放在寄存器中，addi 的一个加数存放在寄存器中，另一个加数是立即数。对于指令 add rd, rs, rt 可以表示为 rs + rt -> rd，对于指令 addi rd, rt, immediate 可以表示为 rt + immediate -> rd。
+- sd 的格式是 `sd a, b` 表示将 a 存到 b 中，在这里 sd = store doubleword，与之相似的还有 sb = store byte、sh = store halfword 以及 sw = store word，其中 byte = 1 byte、halfword = 2 bytes、word = 4 bytes 以及 doubleword = 8 bytes。
+- ld 是 sd 的反操作，`ld a, b` 表示将 b 拷贝到 a 中。
 
 addi 和 sd 之间的组合可以用于操作栈，如下面的汇编代码，具体含义如右边注释所示。
 
@@ -220,3 +233,13 @@ addi 和 sd 之间的组合可以用于操作栈，如下面的汇编代码，�
 addi sp, sp, -34*8 # 开辟 8 * 34 bytes 空间，栈的增长是自高地址向低地址的
 sd x1, 1*8(sp) # 将 x1 寄存器数据存到栈的第一个位置中
 ```
+
+n\*8(sp) 的含义是 (sp + n*8)，sp 的值是指向内存的一个地址，这里面括号 `()` 含有取值的含义，即 dereferences。
+
+## Q&A
+
+### 为什么 trap 保存 x1-x31 全部寄存器，而 switch 只保存 callee saved registers？
+
+Trap 是从 U Mode 切换为 S Mode，此时函数执行环境完全发生了变化，从 user stack 切换到 kernel stack，不属于函数调用，所以必须保存全部的寄存器信息。
+
+Switch 本身就是在 S Mode，所以不存在 user stack 和 kernel stack 的切换，非常类似一个函数调用，只不过在 task 切换途中会更换函数栈，也就是 ra、sp 等寄存器信息，所以只需要保存 callee saved rigsters 即可。

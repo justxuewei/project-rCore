@@ -7,7 +7,6 @@
 // Ref: https://doc.rust-lang.org/reference/macros-by-example.html#the-macro_use-attribute
 #[macro_use]
 mod console;
-pub mod batch;
 mod lang_items;
 mod sbi;
 mod sync;
@@ -17,6 +16,7 @@ mod stack_trace;
 
 mod config;
 mod loader;
+mod task;
 
 use core::arch::global_asm;
 
@@ -30,9 +30,7 @@ fn rust_main() -> ! {
     clear_bss();
 
     println!("[kernel] Welcome to rCore!");
-    trap::init();
-    batch::init();
-    batch::run_next_app();
+    loop {}
 }
 
 // clear_bss 初始化除了 kernel stack 以外的 .bss 区域
