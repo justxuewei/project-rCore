@@ -43,7 +43,6 @@ __alltraps:
 # case1: start running app by __restore
 # case2: back to U after handling trap
 __restore:
-    mv sp, a0           # 执行该指令后 sp -> kernel stack
     ld t0, 32*8(sp)
     ld t1, 33*8(sp)
     ld t2, 2*8(sp)      # t2 保存的是 user stack
