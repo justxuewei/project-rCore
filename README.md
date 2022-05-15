@@ -1,6 +1,6 @@
 # Project rCore
 
-The project rCore implementation by justxuewei.
+Yet another rCore implementation by justxuewei, the original version you may refer to [rcore-os/rCore-Tutorial-v3](https://github.com/rcore-os/rCore-Tutorial-v3).
 
 ## Contents
 
@@ -40,3 +40,4 @@ Recommended extensions for VSCode
 - GitLens
 - RISC-V Support
 - Markdown All in One
+- Makefile Tools

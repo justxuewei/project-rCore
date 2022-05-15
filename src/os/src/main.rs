@@ -7,13 +7,17 @@
 // Ref: https://doc.rust-lang.org/reference/macros-by-example.html#the-macro_use-attribute
 #[macro_use]
 mod console;
-pub mod batch;
 mod lang_items;
 mod sbi;
 mod sync;
 pub mod syscall;
 pub mod trap;
 mod stack_trace;
+
+mod config;
+mod loader;
+mod task;
+mod timer;
 
 use core::arch::global_asm;
 
@@ -28,8 +32,12 @@ fn rust_main() -> ! {
 
     println!("[kernel] Welcome to rCore!");
     trap::init();
-    batch::init();
-    batch::run_next_app();
+    loader::load_apps();
+    trap::enable_timer_interrupt();
+    timer::set_next_trigger();
+    task::run_first_task();
+
+    panic!("Unreachable in rust_main")
 }
 
 // clear_bss 初始化除了 kernel stack 以外的 .bss 区域

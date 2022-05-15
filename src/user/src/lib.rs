@@ -19,9 +19,7 @@ pub extern "C" fn _start() {
 
 #[no_mangle]
 #[linkage = "weak"]
-// 这里 weak 是告诉 linker 这个 main 是可以被
-// 其他 main 函数覆盖的，这里加一个 main 主要是
-// 为了防止 bin 中缺失 main 函数导致编译失败。
+// 这里 weak 是告诉 linker 这个 main 是可以被其他 main 函数覆盖的，这里加一个 main 主要是为了防止 bin 中缺失 main 函数导致编译失败。
 fn main() -> i32 {
     panic!("Cannot find main!");
 }
@@ -44,6 +42,10 @@ pub fn exit(exit_code: i32) -> isize {
     sys_exit(exit_code)
 }
 
-pub fn get_task_info() -> isize {
-    sys_task_info()
+pub fn yield_() -> isize {
+    sys_yield()
+}
+
+pub fn get_time() -> isize {
+    sys_get_time()
 }

@@ -1,19 +1,16 @@
-use crate::{
-    batch::{run_next_app, app_running_time, stat_syscall}, 
-    syscall::MAX_SYSCALL_ID};
+use crate::{task, timer};
 
 pub fn sys_exit(exit_code: i32) -> ! {
     println!("[kernel] Application exited with code {}", exit_code);
+    task::exit_current_and_run_next();
+    panic!("Unreachable in sys_exit!");
+}
 
-    println!("[kernel] Application elpased time {} (unit unknown)", app_running_time());
+pub fn sys_yield() -> isize {
+    task::suspend_current_and_run_next();
+    0
+}
 
-    let mut syscall_slot = [0; MAX_SYSCALL_ID];
-    stat_syscall(&mut syscall_slot);
-    (0..syscall_slot.len()).for_each(|syscall_id| {
-        if syscall_slot[syscall_id] != 0 {
-            println!("[kernel] syscall {} was executed {} times", syscall_id, syscall_slot[syscall_id]);
-        }
-    });
-
-    run_next_app()
+pub fn sys_get_time() -> isize {
+    timer::get_time_ms() as isize
 }
