@@ -17,6 +17,7 @@ mod stack_trace;
 mod config;
 mod loader;
 mod task;
+mod timer;
 
 use core::arch::global_asm;
 
@@ -30,7 +31,13 @@ fn rust_main() -> ! {
     clear_bss();
 
     println!("[kernel] Welcome to rCore!");
-    loop {}
+    trap::init();
+    loader::load_apps();
+    trap::enable_timer_interrupt();
+    timer::set_next_trigger();
+    task::run_first_task();
+
+    panic!("Unreachable in rust_main")
 }
 
 // clear_bss 初始化除了 kernel stack 以外的 .bss 区域

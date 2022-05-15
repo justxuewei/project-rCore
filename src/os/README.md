@@ -30,7 +30,9 @@
 
 栈是一块连续的内存区域，risc-v 中是由高地址向低地址增长的，栈顶是可以执行出栈、入栈操作的，栈底不能执行任何操作，sp 寄存器指向的是栈顶，fp 寄存器指向的是栈底。
 
-### Registers on RISC-V
+### RISC-V
+
+#### Registers
 
 Ref: https://zhuanlan.zhihu.com/p/295439950
 
@@ -51,6 +53,17 @@ Ref: https://zhuanlan.zhihu.com/p/295439950
 
 - RA 寄存器存储的是函数返回后执行的下一条指令的地址，a0-a1 寄存器存储的是返回值，这是两个不同的概念。
 - Callee saved registers 在函数调用的时候会保存，caller saved registers 在函数调用的时候不会被保存。
+
+#### Interrupts
+
+| Interrupt | Exception Code | Description |
+| - | - | - |
+| 1 | 1 | Supervisor software interrupt |
+| 1 | 3 | Machine software interrupt |
+| 1 | 5 | Supervisor timer interrupt |
+| 1 | 7 | Machine timer interrupt |
+| 1 | 9 | Supervisor external interrupt |
+| 1 | 11 | Machine external interrupt |
 
 ### Debug with GDB
 

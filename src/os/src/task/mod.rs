@@ -2,17 +2,16 @@ mod context;
 mod switch;
 mod task;
 
-use core::panicking::panic;
 pub use context::TaskContext;
 
 use self::task::{TaskControlBlock, TaskStatus};
+use crate::task::switch::__switch;
 use crate::{
     config::MAX_APP_NUM,
     loader::{get_num_app, init_app_cx},
     sync::UPSafeCell,
 };
 use lazy_static::*;
-use crate::task::switch::__switch;
 
 lazy_static! {
     pub static ref TASK_MANAGER: TaskManager = {
@@ -92,16 +91,16 @@ impl TaskManager {
         if let Some(next) = self.find_next_task() {
             let mut inner = self.inner.exclusive_access();
             let current = inner.current_task;
-            inner.tasks[current].task_status = TaskStatus::Running;
+            inner.tasks[next].task_status = TaskStatus::Running;
             inner.current_task = next;
-            let cnt_task_cx_ptr = &mut inner.tasks[current].task_cx;
-            let next_task_cx_ptr = &inner.tasks[next].task_cx;
+            let cnt_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
+            let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
             drop(inner);
 
             unsafe {
                 __switch(
-                    cnt_task_cx_ptr as *mut TaskContext,
-                    next_task_cx_ptr as *const TaskContext,
+                    cnt_task_cx_ptr,
+                    next_task_cx_ptr ,
                 );
             }
         } else {
@@ -119,7 +118,7 @@ fn run_next_task() {
 }
 
 fn mark_current_suspended() {
-    TASK_MANAGER.mark_current_supended();
+    TASK_MANAGER.mark_current_suspended();
 }
 
 fn mark_current_exited() {
