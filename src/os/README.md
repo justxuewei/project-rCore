@@ -5,7 +5,9 @@
 - [rCore: An OS Running on RISC-V](#rcore-an-os-running-on-risc-v)
   - [Basic Concepts](#basic-concepts)
     - [Stack](#stack)
-    - [Registers on RISC-V](#registers-on-risc-v)
+    - [RISC-V](#risc-v)
+      - [Registers](#registers)
+      - [Interrupts](#interrupts)
     - [Debug with GDB](#debug-with-gdb)
     - [ELF](#elf)
   - [rCore](#rcore)
@@ -21,8 +23,9 @@
     - [.align](#align)
     - [.altmacro & .rept](#altmacro--rept)
     - [.add & .addi & .sd & .ld](#add--addi--sd--ld)
-  - [Q&A](#qa)
+  - [Notes & QA](#notes--qa)
     - [为什么 trap 保存 x1-x31 全部寄存器，而 switch 只保存 callee saved registers？](#为什么-trap-保存-x1-x31-全部寄存器而-switch-只保存-callee-saved-registers)
+    - [三级页表](#三级页表)
 
 ## Basic Concepts
 
@@ -249,10 +252,20 @@ sd x1, 1*8(sp) # 将 x1 寄存器数据存到栈的第一个位置中
 
 n\*8(sp) 的含义是 (sp + n*8)，sp 的值是指向内存的一个地址，这里面括号 `()` 含有取值的含义，即 dereferences。
 
-## Q&A
+## Notes & QA
 
 ### 为什么 trap 保存 x1-x31 全部寄存器，而 switch 只保存 callee saved registers？
 
 Trap 是从 U Mode 切换为 S Mode，此时函数执行环境完全发生了变化，从 user stack 切换到 kernel stack，不属于函数调用，所以必须保存全部的寄存器信息。
 
 Switch 本身就是在 S Mode，所以不存在 user stack 和 kernel stack 的切换，非常类似一个函数调用，只不过在 task 切换途中会更换函数栈，也就是 ra、sp 等寄存器信息，所以只需要保存 callee saved rigsters 即可。
+
+### 三级页表
+
+在 riscv 处理器中，每个应用对应一个唯一的页表入口（对应的是一个第三级页表），这个入口信息储存在 [CSR 的 stap 字段中](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter4/3sv39-implementation-1.html#satp-layout)。
+
+> 缩写解释：
+> - VP = Virtual Page: 虚拟页
+> - PTE = Page Table Entry: 页表项
+
+三级页表主要的目的是减小页表占用，因此虚拟内存空间很大（在 riscv 中是一个应用有 2^27 个 VP），一个 PTE 占用 8B，那么 2^27 个  PTE 需要占用 1GB 的内存，而且虚拟空间如此之大，但是实际使用很少，所以需要按需保存以降低存储代价，三级页表就类似于一个[字典树](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter4/3sv39-implementation-1.html#id6)。
