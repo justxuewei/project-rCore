@@ -22,6 +22,7 @@ mod timer;
 
 mod mm;
 
+#[macro_use]
 extern crate alloc;
 
 use core::arch::global_asm;

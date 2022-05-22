@@ -1,6 +1,8 @@
 use crate::config;
 use core::fmt::{self, Debug, Formatter};
 
+use super::page_table::PageTableEntry;
+
 // PA = Page Address
 const PA_WIDTH_SV39: usize = 56;
 // VA = Virtual Address
@@ -45,9 +47,29 @@ impl PhysAddr {
     }
 }
 
-// impl PhysPageNum {
-// pub fn get_pte_array(&self) -> &'static mut [Page]
-// }
+impl PhysPageNum {
+    pub fn get_pte_array(&self) -> &'static mut [PageTableEntry] {
+        let pa: PhysAddr = (*self).into();
+        unsafe {
+            core::slice::from_raw_parts_mut(
+                pa.0 as *mut PageTableEntry,
+                config::PAGE_SIZE / core::mem::size_of::<usize>(),
+            )
+        }
+    }
+
+    pub fn get_bytes_array(&self) -> &'static mut [u8] {
+        let pa: PhysAddr = (*self).into();
+        unsafe { core::slice::from_raw_parts_mut(pa.0 as *mut u8, config::PAGE_SIZE) }
+    }
+
+    pub fn get_mut<T>(&self) -> &'static mut T {
+        let pa: PhysAddr = (*self).into();
+        unsafe {
+            (pa.0 as *mut T).as_mut().unwrap()
+        }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 pub struct VirtAddr(pub usize);
@@ -81,6 +103,19 @@ impl VirtAddr {
 
     pub fn aligned(&self) -> bool {
         self.page_offset() == 0
+    }
+}
+
+impl VirtPageNum {
+    pub fn indexes(&self) -> [usize; 3] {
+        let mut vpn = self.0;
+        let mut idxs = [0usize; 3];
+        let idxlen = VPN_WIDTH_SV39 / 3;
+        for i in (0..3).rev() {
+            idxs[i] = vpn & ((1usize << idxlen) - 1);
+            vpn >>= idxlen;
+        }
+        idxs
     }
 }
 
