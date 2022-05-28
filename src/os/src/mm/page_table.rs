@@ -149,7 +149,10 @@ impl PageTable {
         self.find_pte(vpn).map(|pte| *pte)
     }
 
-    // pub fn token(&self) -> usize {
-
-    // }
+    // token 返回启用 SV39 分页机制且指向根页表地址的 satp 的 CSR 寄存器
+    pub fn token(&self) -> usize {
+        // 8usize << 60 表示启用 SV39 分页机制
+        // Ref: https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter4/3sv39-implementation-1.html#csr
+        8usize << 60 | self.root_ppn.0
+    }
 }

@@ -166,6 +166,22 @@ impl From<PhysPageNum> for PhysAddr {
     }
 }
 
+impl From<VirtAddr> for usize {
+    fn from(v: VirtAddr) -> Self {
+        if v.0 >= (1 << (VA_WIDTH_SV39 - 1)) {
+            v.0 | (!((1 << VA_WIDTH_SV39) - 1))
+        } else {
+            v.0
+        }
+    }
+}
+
+impl From<VirtPageNum> for usize {
+    fn from(v: VirtPageNum) -> Self {
+        v.0
+    }
+}
+
 impl From<VirtAddr> for VirtPageNum {
     fn from(v: VirtAddr) -> Self {
         assert_eq!(v.page_offset(), 0);

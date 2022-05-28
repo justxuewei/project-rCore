@@ -1,9 +1,12 @@
-use alloc::{collections::BTreeMap, vec::Vec};
+use core::arch::asm;
+use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
 use bitflags::*;
+use lazy_static::*;
 
 use crate::{
-    config::{MEMORY_END, PAGE_SIZE, TRAMPOLINE},
+    config::{self, MEMORY_END, PAGE_SIZE, TRAMPOLINE},
     mm::address::StepByOne,
+    sync::UPSafeCell,
 };
 
 use super::{
@@ -23,6 +26,11 @@ extern "C" {
     fn ebss();
     fn ekernel();
     fn strampoline();
+}
+
+lazy_static! {
+    pub static ref KERNEL_SPACE: Arc<UPSafeCell<MemorySet>> =
+        Arc::new(unsafe { UPSafeCell::new(MemorySet::new_kernel()) });
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -101,7 +109,7 @@ impl MapArea {
         }
     }
 
-    // copy_data 将 data 的数据拷贝到当前逻辑段中对应的 ppn 对应的物理内存中。
+    // copy_data 将 data 的数据拷贝到当前逻辑段中对应的物理内存中。
     // 需要注意的是 data 长度不能超过当前逻辑段的长度，按页为单位拷贝。
     pub fn copy_data(&mut self, page_table: &mut PageTable, data: &[u8]) {
         assert_eq!(self.map_type, MapType::Framed);
@@ -154,7 +162,14 @@ impl MemorySet {
         );
     }
 
-    fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {}
+    // push 将逻辑段内容映射到物理内存中，如果有数据则深拷贝数据，最后将 map_area 保存到 mmset 中。
+    fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
+        map_area.map(&mut self.page_table);
+        if let Some(data) = data {
+            map_area.copy_data(&mut self.page_table, data);
+        }
+        self.areas.push(map_area);
+    }
 
     fn map_trampoline(&mut self) {
         self.page_table.map(
@@ -224,5 +239,91 @@ impl MemorySet {
         memory_set.push(phy_mem_map_area, None);
 
         memory_set
+    }
+
+    // from_elf 根据 elf 文件创建一个 mmset，
+    // 完成的事情包括验证 elf 文件是否合法，根据 program headers 加载数据的逻辑段，
+    // 设置 user stack，以及设置 trap context 地址。
+    // returns:
+    //  - mmset
+    //  - user stack 栈顶虚拟地址
+    //  - app 入口地址
+    pub fn from_elf(elf_data: &[u8]) -> (Self, usize, usize) {
+        let mut memory_set = Self::new_bare();
+        memory_set.map_trampoline();
+
+        // read elf header
+        let elf = xmas_elf::ElfFile::new(elf_data).unwrap();
+        let elf_header = elf.header;
+        let magic = elf_header.pt1.magic;
+        assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
+
+        // load program
+        let ph_count = elf_header.pt2.ph_count();
+        let mut max_end_vpn = VirtPageNum(0);
+        for i in 0..ph_count {
+            let ph = elf.program_header(i).unwrap();
+            if ph.get_type().unwrap() == xmas_elf::program::Type::Load {
+                let start_va: VirtAddr = (ph.virtual_addr() as usize).into();
+                let end_va: VirtAddr = ((ph.virtual_addr() + ph.mem_size()) as usize).into();
+                let mut map_perm = MapPermission::U;
+                let ph_flags = ph.flags();
+                if ph_flags.is_read() {
+                    map_perm |= MapPermission::R;
+                }
+                if ph_flags.is_write() {
+                    map_perm |= MapPermission::W;
+                }
+                if ph_flags.is_execute() {
+                    map_perm |= MapPermission::X;
+                }
+                let map_area = MapArea::new(start_va, end_va, MapType::Framed, map_perm);
+                max_end_vpn = map_area.vpn_range.get_end();
+                memory_set.push(
+                    map_area,
+                    Some(&elf.input[ph.offset() as usize..(ph.offset() + ph.file_size()) as usize]),
+                );
+            }
+        }
+
+        let max_end_va: VirtAddr = max_end_vpn.into();
+        let mut user_stack_bottom: usize = max_end_va.into();
+        // guard page
+        user_stack_bottom += config::PAGE_SIZE;
+
+        // user stack
+        let user_stack_top = user_stack_bottom + config::USER_STACK_SIZE;
+        let user_stack_map_area = MapArea::new(
+            user_stack_bottom.into(),
+            user_stack_top.into(),
+            MapType::Framed,
+            MapPermission::R | MapPermission::W | MapPermission::U,
+        );
+        memory_set.push(user_stack_map_area, None);
+
+        // trap context
+        let trap_ctx_map_area = MapArea::new(
+            config::TRAMPOLINE.into(),
+            config::TRAP_CONTEXT.into(),
+            MapType::Framed,
+            MapPermission::R | MapPermission::W,
+        );
+        memory_set.push(trap_ctx_map_area, None);
+
+        (
+            memory_set,
+            user_stack_top,
+            elf.header.pt2.entry_point() as usize,
+        )
+    }
+
+    // activate 设置根页表地址并启用 SV39 分页
+    pub fn activate(&self) {
+        let satp = self.page_table.token();
+        unsafe {
+            riscv::register::satp::write(satp);
+            // 写屏障
+            asm!("sfence.vma");
+        }
     }
 }
