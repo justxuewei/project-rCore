@@ -2,6 +2,7 @@ use core::arch::asm;
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
 use bitflags::*;
 use lazy_static::*;
+use riscv::paging::PageTableEntry;
 
 use crate::{
     config::{self, MEMORY_END, PAGE_SIZE, TRAMPOLINE},
@@ -325,5 +326,9 @@ impl MemorySet {
             // 写屏障
             asm!("sfence.vma");
         }
+    }
+
+    pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
+        self.page_table.tra
     }
 }

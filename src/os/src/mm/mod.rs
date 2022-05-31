@@ -1,8 +1,8 @@
 mod heap_allocator;
-mod address;
+pub mod address;
 mod page_table;
 mod frame_allocator;
-mod memory_set;
+pub mod memory_set;
 
 pub use memory_set::KERNEL_SPACE;
 

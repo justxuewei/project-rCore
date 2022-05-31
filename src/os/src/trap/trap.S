@@ -8,17 +8,16 @@
     ld x\n, \n*8(sp)
 .endm
 
-    .section .text
+    .section .text.trampoline
     .globl __alltraps
     .globl __restore
     
     .align 2                # the address of __alltraps must be aligned in 2^2 bytes
 # switch kerner stack from user stack and save all rigsters
 __alltraps:
-    # sp -> user stack & sscratch -> kernel stack
-    csrrw sp, sscratch, sp  # 将 sscratch 读取到 sp，将 sp 写入 sscartch，也就是交换 sscratch 和 sp 的值
-    # sp -> kernel stack & sscratch -> user stack
-    addi sp, sp, -34*8      # sizeof TrapContext == 34 * 8
+    # sp -> user stack & sscratch -> *TrapContext in user space
+    csrrw sp, sscratch, sp  # 交换 sp 和 sscratch 的值
+    # sp -> *TrapContext in user space & sscratch -> user stack
     sd x1, 1*8(sp)
     sd x3, 3*8(sp)
     .set n, 5
@@ -31,18 +30,27 @@ __alltraps:
     # ref: https://zhuanlan.zhihu.com/p/295439950
     csrr t0, sstatus
     csrr t1, sepc
-    sd t0, 32*8(sp)
-    sd t1, 33*8(sp)
+    sd t0, 32*8(sp) # 将 sstatus 保存到 TrapContext::sstatus
+    sd t1, 33*8(sp) # 将 sepc 保存到 TrapContext::sepc
     csrr t2, sscratch
-    sd t2, 2*8(sp)
-    mv a0, sp           # 在执行该指令后 kernel stack sp 会作为 trap_handler 的入参
-    call trap_handler
+    sd t2, 2*8(sp)  # 将 user stack 保存到 TrapContext::x[2]
+    ld t0, 34*8(sp) # 将 TrapContext::kernel_stap 保存到 t0 寄存器
+    ld t1, 36*8(sp) # 将 TrapContext::trap_handler 保存到 t1 寄存器
+    ld sp, 35*8(sp) # 将 TrapContext::kernel_stack 保存到 sp 寄存器，此时切换为 kernel stack
+    csrw satp, t0   # 使用内核虚拟空间
+    sfence.vma
+    jr t1           # 跳转到 trap_handler
 
 # 在执行完 trap_handler 之后会按照顺序继续执行 __restore
 
 # case1: start running app by __restore
-# case2: back to U after handling trap
+# case2: back to U Mode after handling trap
 __restore:
+    # a0 -> *TrapContext in user space; a1 -> user space token
+    csrw satp, a1       # 使用用户内核空间
+    sfence.vma
+    csrw sscratch, a0   # sscratch -> *TrapContext in user space
+    mv sp, a0           # sp -> *TrapContext in user space
     ld t0, 32*8(sp)
     ld t1, 33*8(sp)
     ld t2, 2*8(sp)      # t2 保存的是 user stack
@@ -56,6 +64,5 @@ __restore:
         LOAD_GP %n
         .set n, n+1
     .endr
-    addi sp, sp, 34*8
-    csrrw sp, sscratch, sp  # 交换 sp 和 sscratch 的值，现在 sp -> user stack & sscratch -> kernel stack
+    ld sp, 2*8(sp)      # sp -> TrapContext::x[2], aka user stack
     sret
