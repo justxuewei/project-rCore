@@ -2,7 +2,6 @@ use core::arch::asm;
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
 use bitflags::*;
 use lazy_static::*;
-use riscv::paging::PageTableEntry;
 
 use crate::{
     config::{self, MEMORY_END, PAGE_SIZE, TRAMPOLINE},
@@ -13,7 +12,7 @@ use crate::{
 use super::{
     address::{PhysAddr, PhysPageNum, VPNRange, VirtAddr, VirtPageNum},
     frame_allocator::{frame_alloc, FrameTracker},
-    page_table::{PTEFlags, PageTable},
+    page_table::{PTEFlags, PageTable, PageTableEntry},
 };
 
 extern "C" {
@@ -147,10 +146,11 @@ impl MemorySet {
         }
     }
 
-    // pub fn token(&self) -> usize {
+    pub fn token(&self) -> usize {
+        self.page_table.token()
+    }
 
-    // }
-
+    // insert_framed_area 将逻辑地址映射到 memory set 中。
     pub fn insert_framed_area(
         &mut self,
         start_va: VirtAddr,
@@ -329,6 +329,6 @@ impl MemorySet {
     }
 
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
-        self.page_table.tra
+        self.page_table.translate(vpn)
     }
 }
