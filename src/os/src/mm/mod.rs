@@ -1,6 +1,6 @@
 mod heap_allocator;
 pub mod address;
-mod page_table;
+pub mod page_table;
 mod frame_allocator;
 pub mod memory_set;
 

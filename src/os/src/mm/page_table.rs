@@ -1,9 +1,8 @@
-use alloc::vec::{self, Vec};
+use alloc::vec::Vec;
 use bitflags::*;
-use riscv::{addr::Page, paging::PTE};
 
 use super::{
-    address::{PhysPageNum, VirtPageNum},
+    address::{PhysPageNum, StepByOne, VirtAddr, VirtPageNum},
     frame_allocator::{frame_alloc, FrameTracker},
 };
 
@@ -82,12 +81,12 @@ impl PageTable {
         }
     }
 
-    // pub fn from_token(stap: usize) -> Self {
-    //     Self {
-    //         root_ppn: stap.into(),
-    //         frames: Vec::new(),
-    //     }
-    // }
+    pub fn from_token(satp: usize) -> Self {
+        Self {
+            root_ppn: satp.into(),
+            frames: Vec::new(),
+        }
+    }
 
     fn find_pte_create(&mut self, vpn: VirtPageNum) -> Option<&mut PageTableEntry> {
         let idxs = vpn.indexes();
@@ -155,4 +154,30 @@ impl PageTable {
         // Ref: https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter4/3sv39-implementation-1.html#csr
         8usize << 60 | self.root_ppn.0
     }
+}
+
+// 将 token 地址空间的数据保存到 Vec 缓冲区中
+// ptr 是 token 地址空间的虚拟地址
+pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&'static mut [u8]> {
+    let page_table = PageTable::from_token(token);
+    let mut start = ptr as usize;
+    let end = start + len;
+    let mut v = Vec::new();
+
+    while start < end {
+        let start_va = VirtAddr::from(start);
+        let mut vpn = start_va.floor();
+        let ppn = page_table.find_pte(vpn).unwrap().ppn();
+        vpn.step();
+        let mut end_va: VirtAddr = vpn.into();
+        end_va = end_va.min(VirtAddr::from(end));
+        if end_va.page_offset() == 0 {
+            v.push(&mut ppn.get_bytes_array()[start_va.page_offset()..]);
+        } else {
+            v.push(&mut ppn.get_bytes_array()[start_va.page_offset()..end_va.page_offset()]);
+        }
+        start = end_va.into();
+    }
+
+    v
 }
