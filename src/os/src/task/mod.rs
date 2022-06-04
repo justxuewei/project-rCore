@@ -2,29 +2,25 @@ mod context;
 mod switch;
 mod task;
 
+use alloc::vec::Vec;
 pub use context::TaskContext;
 
 use self::task::{TaskControlBlock, TaskStatus};
+use crate::loader::get_app_data;
 use crate::task::switch::__switch;
-use crate::{
-    config::MAX_APP_NUM,
-    loader::{get_num_app, init_app_cx},
-    sync::UPSafeCell,
-};
+use crate::trap::TrapContext;
+use crate::{loader::get_num_app, sync::UPSafeCell};
 use lazy_static::*;
 
 lazy_static! {
     pub static ref TASK_MANAGER: TaskManager = {
         let num_app = get_num_app();
-        let mut tasks = [TaskControlBlock {
-            task_cx: TaskContext::zero_init(),
-            task_status: TaskStatus::UnInit,
-        }; MAX_APP_NUM];
-        // all apps statues from `UnInit` to `Ready`
-        for (i, task) in tasks.iter_mut().enumerate() {
-            task.task_cx = TaskContext::goto_restore(init_app_cx(i));
-            task.task_status = TaskStatus::Ready;
+        let mut tasks: Vec<TaskControlBlock> = Vec::new();
+        for i in 0..num_app {
+            tasks.push(TaskControlBlock::new(get_app_data(i), i));
         }
+
+        println!("[kernel debug] TASK_MANAGER was initialized");
 
         TaskManager {
             num_app: num_app,
@@ -44,7 +40,7 @@ pub struct TaskManager {
 }
 
 pub struct TaskManagerInner {
-    tasks: [TaskControlBlock; MAX_APP_NUM],
+    tasks: Vec<TaskControlBlock>,
     current_task: usize,
 }
 
@@ -98,14 +94,21 @@ impl TaskManager {
             drop(inner);
 
             unsafe {
-                __switch(
-                    cnt_task_cx_ptr,
-                    next_task_cx_ptr ,
-                );
+                __switch(cnt_task_cx_ptr, next_task_cx_ptr);
             }
         } else {
             panic!("[kernel] all applications completed!");
         }
+    }
+
+    fn get_current_token(&self) -> usize {
+        let inner = self.inner.exclusive_access();
+        inner.tasks[inner.current_task].get_user_token()
+    }
+
+    fn get_current_trap_cx(&self) -> &'static mut TrapContext {
+        let inner = self.inner.exclusive_access();
+        inner.tasks[inner.current_task].get_trap_cx()
     }
 }
 
@@ -133,4 +136,12 @@ pub fn suspend_current_and_run_next() {
 pub fn exit_current_and_run_next() {
     mark_current_exited();
     run_next_task();
+}
+
+pub fn current_user_token() -> usize {
+    TASK_MANAGER.get_current_token()
+}
+
+pub fn current_trap_cx() -> &'static mut TrapContext {
+    TASK_MANAGER.get_current_trap_cx()
 }

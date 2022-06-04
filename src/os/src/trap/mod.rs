@@ -1,11 +1,11 @@
 mod context;
 
-use crate::{syscall::syscall, task, timer};
-use core::arch::global_asm;
+use crate::{config, syscall::syscall, task, timer};
+use core::arch::{global_asm, asm};
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Interrupt, Trap},
-    stval, stvec, sie
+    sie, stval, stvec,
 };
 
 pub use context::TrapContext;
@@ -13,21 +13,32 @@ pub use context::TrapContext;
 global_asm!(include_str!("trap.S"));
 
 pub fn init() {
-    extern "C" {
-        fn __alltraps();
-    }
+    set_kernel_trap_entry();
+}
+
+fn set_kernel_trap_entry() {
     unsafe {
-        // stvec 保存 trap 处理代码的入口地址
-        stvec::write(__alltraps as usize, TrapMode::Direct);
+        stvec::write(trap_from_kernel as usize, TrapMode::Direct);
     }
 }
 
+fn set_user_trap_entry() {
+    unsafe {
+        stvec::write(config::TRAMPOLINE as usize, TrapMode::Direct);
+    }
+}
+
+// 启用 timer 中断
 pub fn enable_timer_interrupt() {
-    unsafe { sie::set_stimer() }
+    unsafe {
+        sie::set_stimer();
+    }
 }
 
 #[no_mangle]
-pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
+pub fn trap_handler() -> ! {
+    set_kernel_trap_entry();
+    let cx = task::current_trap_cx();
     let scause = scause::read(); // trap 原因
     let stval = stval::read(); // trap 附加信息
     match scause.cause() {
@@ -37,7 +48,10 @@ pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
             cx.sepc += 4;
             cx.x[10] = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
         }
-        Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) => {
+        Trap::Exception(Exception::StoreFault)
+        | Trap::Exception(Exception::StorePageFault)
+        | Trap::Exception(Exception::LoadFault)
+        | Trap::Exception(Exception::LoadPageFault) => {
             println!("[kernel] PageFault in application, kernel killed it.");
             task::exit_current_and_run_next();
         }
@@ -58,5 +72,35 @@ pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
             );
         }
     }
-    cx
+    
+    trap_return();
+}
+
+#[no_mangle]
+// 用于从内核态切换为用户态，并在用户态调用 __restore 方法
+pub fn trap_return() -> ! {
+    set_user_trap_entry();
+    let trap_cx_ptr = config::TRAP_CONTEXT;
+    let user_token = task::current_user_token();
+    extern "C" {
+        fn __alltraps();
+        fn __restore();
+    }
+    let restore_va = __restore as usize - __alltraps as usize + config::TRAMPOLINE;
+
+    unsafe {
+        asm!(
+            "fence.i",
+            "jr {restore_va}",
+            restore_va = in(reg) restore_va,
+            in("a0") trap_cx_ptr,
+            in("a1") user_token,
+            options(noreturn)
+        );
+    }
+}
+
+#[no_mangle]
+pub fn trap_from_kernel() -> ! {
+    panic!("a trap from kernel")
 }

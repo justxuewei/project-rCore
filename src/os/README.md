@@ -5,7 +5,9 @@
 - [rCore: An OS Running on RISC-V](#rcore-an-os-running-on-risc-v)
   - [Basic Concepts](#basic-concepts)
     - [Stack](#stack)
-    - [Registers on RISC-V](#registers-on-risc-v)
+    - [RISC-V](#risc-v)
+      - [Registers](#registers)
+      - [Interrupts](#interrupts)
     - [Debug with GDB](#debug-with-gdb)
     - [ELF](#elf)
   - [rCore](#rcore)
@@ -21,8 +23,13 @@
     - [.align](#align)
     - [.altmacro & .rept](#altmacro--rept)
     - [.add & .addi & .sd & .ld](#add--addi--sd--ld)
-  - [Q&A](#qa)
+  - [Notes & QA](#notes--qa)
+    - [Trap 寄存器之 sscratch](#trap-寄存器之-sscratch)
     - [为什么 trap 保存 x1-x31 全部寄存器，而 switch 只保存 callee saved registers？](#为什么-trap-保存-x1-x31-全部寄存器而-switch-只保存-callee-saved-registers)
+    - [三级页表](#三级页表)
+    - [loader 在多道程序和地址空间的职责问题](#loader-在多道程序和地址空间的职责问题)
+    - [读屏障和写屏障](#读屏障和写屏障)
+  - [使用 TUI GDB 调试 rCore](#使用-tui-gdb-调试-rcore)
 
 ## Basic Concepts
 
@@ -249,10 +256,49 @@ sd x1, 1*8(sp) # 将 x1 寄存器数据存到栈的第一个位置中
 
 n\*8(sp) 的含义是 (sp + n*8)，sp 的值是指向内存的一个地址，这里面括号 `()` 含有取值的含义，即 dereferences。
 
-## Q&A
+## Notes & QA
+
+### Trap 寄存器之 sscratch
+
+sscratch 是基址中转寄存器，在 ch4 启用地址空间之前，在 U Mode 时 sscratch 指向的是 kernel stack 的栈顶位置，因为在从 S Mode 切换到 U Mode 之前都需要先执行 __restore，在该函数临近结束的时候将 sp 设置为用户程序栈顶，sscratch 设置为 kernel stack 的栈顶，see also [Trap 上下文的保存与恢复](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter2/4trap-handling.html#id8)。
 
 ### 为什么 trap 保存 x1-x31 全部寄存器，而 switch 只保存 callee saved registers？
 
 Trap 是从 U Mode 切换为 S Mode，此时函数执行环境完全发生了变化，从 user stack 切换到 kernel stack，不属于函数调用，所以必须保存全部的寄存器信息。
 
 Switch 本身就是在 S Mode，所以不存在 user stack 和 kernel stack 的切换，非常类似一个函数调用，只不过在 task 切换途中会更换函数栈，也就是 ra、sp 等寄存器信息，所以只需要保存 callee saved rigsters 即可。
+
+### 三级页表
+
+在 riscv 处理器中，每个应用对应一个唯一的页表入口（对应的是一个第三级页表），这个入口信息储存在 [CSR 的 stap 字段中](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter4/3sv39-implementation-1.html#satp-layout)。
+
+> 缩写解释：
+> - VP = Virtual Page: 虚拟页
+> - PTE = Page Table Entry: 页表项
+
+三级页表主要的目的是减小页表占用，因此虚拟内存空间很大（在 riscv 中是一个应用有 2^27 个 VP），一个 PTE 占用 8B，那么 2^27 个  PTE 需要占用 1GB 的内存，而且虚拟空间如此之大，但是实际使用很少，所以需要按需保存以降低存储代价，三级页表就类似于一个[字典树](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter4/3sv39-implementation-1.html#id6)。
+
+### loader 在多道程序和地址空间的职责问题
+
+Loader crate 的本意是将程序加载到内存指定位置中，在多道程序（ch3）中由于内存不能使用虚拟内存空间，所以程序所处的位置就是物理内存中的位置，此时 loader 做的事情是初始化 kernel stack, user stack 同时将用户的程序从指定地址（base address）中加载。在启用了地址空间（ch4）时，kernel stack 和 user stack 都在各自的虚拟空间中，因此不需要在 loader 中初始化数据。
+
+### 读屏障和写屏障
+
+在 ch4 地址空间的实现中，使用了 `sfence.vma` 刷新 TLB 快表，主要的原理是通过读屏障（load barrier）实现的，可以保证老数据不会导致脏数据产生，更多内容参见 [内存屏障](https://www.jianshu.com/p/2ab5e3d7e510)。
+
+## 使用 TUI GDB 调试 rCore
+
+Ref: https://rcore-os.github.io/rCore-Tutorial-deploy/docs/pre-lab/gdb.html
+
+```bash
+sudo apt-get install libncurses5-dev python python-dev texinfo libreadline-dev
+# 下载 GDB 源码: https://mirrors.tuna.tsinghua.edu.cn/gnu/gdb/?C=M&O=D
+tar -xvf xxx.tar.xz
+cd xxx
+mkdir build
+cd build
+../configure --prefix=/usr/local --with-python=/usr/bin/python --target=riscv64-unknown-elf --enable-tui=yes
+make -j$(nproc)
+
+wget -P ~ https://git.io/.gdbinit
+```

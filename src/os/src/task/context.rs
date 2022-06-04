@@ -1,8 +1,13 @@
+use crate::trap::trap_return;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TaskContext {
+    // return address
     ra: usize,
+    // kernel stack
     sp: usize,
+    // called saved registers
     s: [usize; 12],
 }
 
@@ -15,12 +20,9 @@ impl TaskContext {
         }
     }
 
-    pub fn goto_restore(kstack_ptr: usize) -> Self {
-        extern "C" {
-            fn __restore();
-        }
+    pub fn goto_trap_return(kstack_ptr: usize) -> Self {
         Self {
-            ra: __restore as usize,
+            ra: trap_return as usize,
             sp: kstack_ptr,
             s: [0; 12],
         }

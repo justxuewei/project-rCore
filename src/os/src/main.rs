@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(panic_info_message)]
+#![feature(alloc_error_handler)]
 
 // #[macro_use] 的作用是在 mod 作用域结束时依然可以使用 macro，
 // 或者引入其他 crate 的 marcos。
@@ -12,12 +13,16 @@ mod sbi;
 mod sync;
 pub mod syscall;
 pub mod trap;
-mod stack_trace;
 
 mod config;
 mod loader;
 mod task;
 mod timer;
+
+mod mm;
+
+#[macro_use]
+extern crate alloc;
 
 use core::arch::global_asm;
 
@@ -31,11 +36,12 @@ fn rust_main() -> ! {
     clear_bss();
 
     println!("[kernel] Welcome to rCore!");
+    mm::init();
     trap::init();
-    loader::load_apps();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
     task::run_first_task();
+
 
     panic!("Unreachable in rust_main")
 }
