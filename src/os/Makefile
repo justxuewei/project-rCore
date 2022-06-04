@@ -11,8 +11,9 @@ OS_BIN_OUTPUT := $(TARGET_DIR)/$(RUST_TARGET)/release/os.bin
 
 build: $(OS_OUTPUT) $(OS_BIN_OUTPUT)
 run: qemu
-build-and-run: clean run
+brun: clean run
 debug: qemu-gdb
+bdebug: clean debug
 
 # If you want to terminate the QEMU, please
 # press `ctrl + A, X`.

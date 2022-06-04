@@ -1,6 +1,6 @@
-use core::arch::asm;
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
 use bitflags::*;
+use core::arch::asm;
 use lazy_static::*;
 
 use crate::{
@@ -173,11 +173,9 @@ impl MemorySet {
     }
 
     fn map_trampoline(&mut self) {
-        self.page_table.map(
-            VirtAddr::from(TRAMPOLINE).into(),
-            PhysAddr::from(strampoline as usize).into(),
-            PTEFlags::R | PTEFlags::X,
-        );
+        let vpn: VirtPageNum = VirtAddr::from(TRAMPOLINE).into();
+        let ppn: PhysPageNum = PhysAddr::from(strampoline as usize).into();
+        self.page_table.map(vpn, ppn, PTEFlags::R | PTEFlags::X);
     }
 
     pub fn new_kernel() -> Self {
@@ -239,6 +237,8 @@ impl MemorySet {
         );
         memory_set.push(phy_mem_map_area, None);
 
+        println!("kernel's memory set was loaded");
+
         memory_set
     }
 
@@ -259,7 +259,7 @@ impl MemorySet {
         let magic = elf_header.pt1.magic;
         assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
 
-        // load program
+        // load program from program headers
         let ph_count = elf_header.pt2.ph_count();
         let mut max_end_vpn = VirtPageNum(0);
         for i in 0..ph_count {
@@ -294,9 +294,11 @@ impl MemorySet {
 
         // user stack
         let user_stack_top = user_stack_bottom + config::USER_STACK_SIZE;
+        let user_stack_start_va = user_stack_bottom.into();
+        let user_stack_end_va = user_stack_top.into();
         let user_stack_map_area = MapArea::new(
-            user_stack_bottom.into(),
-            user_stack_top.into(),
+            user_stack_start_va,
+            user_stack_end_va,
             MapType::Framed,
             MapPermission::R | MapPermission::W | MapPermission::U,
         );
@@ -304,8 +306,8 @@ impl MemorySet {
 
         // trap context
         let trap_ctx_map_area = MapArea::new(
-            config::TRAMPOLINE.into(),
             config::TRAP_CONTEXT.into(),
+            config::TRAMPOLINE.into(),
             MapType::Framed,
             MapPermission::R | MapPermission::W,
         );

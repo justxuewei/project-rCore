@@ -88,6 +88,8 @@ impl PageTable {
         }
     }
 
+    // 查找并创建页表项 (page table entry)
+    // 如果在创建途中发现二级/三级页表没有被创建，则会自动通过 frame allocator 创建。
     fn find_pte_create(&mut self, vpn: VirtPageNum) -> Option<&mut PageTableEntry> {
         let idxs = vpn.indexes();
         let mut ppn = self.root_ppn;

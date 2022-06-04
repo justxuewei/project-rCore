@@ -20,6 +20,8 @@ lazy_static! {
             tasks.push(TaskControlBlock::new(get_app_data(i), i));
         }
 
+        println!("[kernel debug] TASK_MANAGER was initialized");
+
         TaskManager {
             num_app: num_app,
             inner: unsafe {

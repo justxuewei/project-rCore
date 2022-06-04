@@ -53,10 +53,8 @@ __restore:
     mv sp, a0           # sp -> *TrapContext in user space
     ld t0, 32*8(sp)
     ld t1, 33*8(sp)
-    ld t2, 2*8(sp)      # t2 保存的是 user stack
     csrw sstatus, t0
     csrw sepc, t1
-    csrw sscratch, t2   # sscratch -> user stack
     ld x1, 1*8(sp)
     ld x3, 3*8(sp)
     .set n, 5

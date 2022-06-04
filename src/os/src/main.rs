@@ -13,7 +13,6 @@ mod sbi;
 mod sync;
 pub mod syscall;
 pub mod trap;
-mod stack_trace;
 
 mod config;
 mod loader;
@@ -37,11 +36,12 @@ fn rust_main() -> ! {
     clear_bss();
 
     println!("[kernel] Welcome to rCore!");
+    mm::init();
     trap::init();
-    loader::load_apps();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
     task::run_first_task();
+
 
     panic!("Unreachable in rust_main")
 }

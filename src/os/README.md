@@ -29,6 +29,7 @@
     - [三级页表](#三级页表)
     - [loader 在多道程序和地址空间的职责问题](#loader-在多道程序和地址空间的职责问题)
     - [读屏障和写屏障](#读屏障和写屏障)
+  - [使用 TUI GDB 调试 rCore](#使用-tui-gdb-调试-rcore)
 
 ## Basic Concepts
 
@@ -284,3 +285,20 @@ Loader crate 的本意是将程序加载到内存指定位置中，在多道程�
 ### 读屏障和写屏障
 
 在 ch4 地址空间的实现中，使用了 `sfence.vma` 刷新 TLB 快表，主要的原理是通过读屏障（load barrier）实现的，可以保证老数据不会导致脏数据产生，更多内容参见 [内存屏障](https://www.jianshu.com/p/2ab5e3d7e510)。
+
+## 使用 TUI GDB 调试 rCore
+
+Ref: https://rcore-os.github.io/rCore-Tutorial-deploy/docs/pre-lab/gdb.html
+
+```bash
+sudo apt-get install libncurses5-dev python python-dev texinfo libreadline-dev
+# 下载 GDB 源码: https://mirrors.tuna.tsinghua.edu.cn/gnu/gdb/?C=M&O=D
+tar -xvf xxx.tar.xz
+cd xxx
+mkdir build
+cd build
+../configure --prefix=/usr/local --with-python=/usr/bin/python --target=riscv64-unknown-elf --enable-tui=yes
+make -j$(nproc)
+
+wget -P ~ https://git.io/.gdbinit
+```

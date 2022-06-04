@@ -79,13 +79,13 @@ pub fn trap_handler() -> ! {
 #[no_mangle]
 // 用于从内核态切换为用户态，并在用户态调用 __restore 方法
 pub fn trap_return() -> ! {
+    set_user_trap_entry();
+    let trap_cx_ptr = config::TRAP_CONTEXT;
+    let user_token = task::current_user_token();
     extern "C" {
         fn __alltraps();
         fn __restore();
     }
-    set_user_trap_entry();
-    let trap_cx_ptr = config::TRAP_CONTEXT;
-    let user_token = task::current_user_token();
     let restore_va = __restore as usize - __alltraps as usize + config::TRAMPOLINE;
 
     unsafe {

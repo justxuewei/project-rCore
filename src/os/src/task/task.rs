@@ -66,7 +66,6 @@ impl TaskControlBlock {
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum TaskStatus {
-    UnInit,
     Ready,
     Running,
     Exited,
