@@ -17,7 +17,7 @@ bdebug: clean debug
 
 # If you want to terminate the QEMU, please
 # press `ctrl + A, X`.
-qemu-gdb: $(OS_OUTPUT) $(OS_BIN_OUTPUT)
+qemu-gdb: $(OS_OUTPUT) $(OS_BIN_OUTPUT)~
 	@qemu-system-riscv64 \
 		-machine virt \
 		-nographic \
