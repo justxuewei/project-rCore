@@ -2,6 +2,7 @@ use crate::trap::trap_return;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
+// TaskContext 存放进程切换上下文（主要内容为 callee registers）
 pub struct TaskContext {
     // return address
     ra: usize,

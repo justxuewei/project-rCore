@@ -1,6 +1,6 @@
 use core::cell::RefMut;
 
-use alloc::{rc::Weak, sync::Arc, vec::Vec};
+use alloc::{sync::{Arc, Weak}, vec::Vec};
 
 use super::{
     pid::{KernelStack, PidHandle, self},
