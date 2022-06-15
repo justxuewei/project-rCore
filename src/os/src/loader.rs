@@ -49,7 +49,7 @@ lazy_static! {
 }
 
 // 根据应用名 (name) 获取 elf 数据
-pub fn get_app_data_by_nane(name: &str) -> Option<&'static [u8]> {
+pub fn get_app_data_by_name(name: &str) -> Option<&'static [u8]> {
     let num_app = get_num_app();
     (0..num_app)
         .find(|&i| APP_NAMES[i] == name)

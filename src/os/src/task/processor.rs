@@ -11,6 +11,8 @@ use super::{
 
 use lazy_static::*;
 
+// Processor 负责实际管理核心进行运行情况，比如可以执行
+// 新进程时，就从 TaskManager 中 fetch 一个进程执行。
 pub struct Processor {
     current: Option<Arc<TaskControlBlock>>,
     idle_task_cx: TaskContext,
@@ -34,7 +36,7 @@ impl Processor {
         self.current.as_ref().map(|ptr| Arc::clone(ptr))
     }
 
-    fn get_idle_task_cx_ptr(&mut self) -> *mut TaskContext {
+    pub fn get_idle_task_cx_ptr(&mut self) -> *mut TaskContext {
         &mut self.idle_task_cx as *mut _
     }
 }

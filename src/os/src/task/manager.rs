@@ -5,8 +5,8 @@ use crate::sync::UPSafeCell;
 
 use super::task::TaskControlBlock;
 
-use lazy_static::*;
-
+// TaskManager 管理全局需要执行的进程 (TaskControlBlock)，
+// 需要和 Processor 相互配合。
 pub struct TaskManager {
     ready_queue: VecDeque<Arc<TaskControlBlock>>,
 }
@@ -32,6 +32,7 @@ lazy_static! {
         unsafe { UPSafeCell::new(TaskManager::new()) };
 }
 
+// 添加一个任务
 pub fn add_task(task: Arc<TaskControlBlock>) {
     TASK_MANAGER.exclusive_access().add(task);
 }
