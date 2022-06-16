@@ -15,7 +15,7 @@ use crate::{
     mm::{
         self,
         address::{PhysPageNum, VirtAddr},
-        memory_set::{MemorySet},
+        memory_set::{MapPermission, MemorySet},
     },
     sync::UPSafeCell,
     trap::{trap_handler, TrapContext},
@@ -109,11 +109,45 @@ impl TaskControlBlock {
         self.pid.0
     }
 
-    pub fn exec(&self, elf_data: &[u8]) {
-        todo!()
+    pub fn fork(self: &Arc<TaskControlBlock>) -> Arc<TaskControlBlock> {
+        let mut parent_inner = self.inner_exclusive_access();
+        
+        let pid_handle = pid::pid_alloc();
+        let kernel_stack = pid::KernelStack::new(&pid_handle);
+        let kernel_stack_top = kernel_stack.get_top();
+
+        // tcb inner
+        let memory_set = MemorySet::from_existed_user(&parent_inner.memory_set);
+        let trap_cx_ppn = memory_set
+            .translate(VirtAddr::from(config::TRAP_CONTEXT).into())
+            .unwrap()
+            .ppn();
+        let tcb_inner = TaskControlBlockInner {
+            trap_cx_ppn,
+            base_size: parent_inner.base_size,
+            task_status: TaskStatus::Ready,
+            task_cx: TaskContext::goto_trap_return(kernel_stack_top),
+            memory_set,
+            parent: Some(Arc::downgrade(self)),
+            children: Vec::new(),
+            exit_code: 0,
+        };
+
+        let tcb = Arc::new(TaskControlBlock {
+            pid: pid_handle,
+            kernel_stack,
+            inner: unsafe { UPSafeCell::new(tcb_inner) },
+        });
+
+        parent_inner.children.push(tcb.clone());
+
+        let mut trap_cx = tcb.inner_exclusive_access().get_trap_cx();
+        trap_cx.kernel_sp = kernel_stack_top;
+
+        tcb
     }
 
-    pub fn fork(self: &Arc<TaskControlBlock>) -> Arc<TaskControlBlock> {
+    pub fn exec(&self, elf_data: &[u8]) {
         todo!()
     }
 }

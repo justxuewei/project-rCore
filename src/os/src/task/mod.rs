@@ -1,7 +1,7 @@
 mod context;
-mod manager;
+pub mod manager;
 mod pid;
-mod processor;
+pub mod processor;
 mod switch;
 mod task;
 
@@ -12,7 +12,7 @@ use crate::{loader, task::task::TaskControlBlock};
 
 pub use context::TaskContext;
 
-use self::{switch::__switch, task::TaskStatus, processor::schedule};
+use self::{task::TaskStatus};
 
 const INITPROC_NAME: &str = "initproc";
 
