@@ -47,12 +47,16 @@ pub fn trap_handler() -> ! {
     let stval = stval::read(); // trap 附加信息
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
-            let trap_cx = processor::current_trap_cx();
+            let mut trap_cx = processor::current_trap_cx();
             // sepc 目前指向的是 ecall 指令的地址，但是它应该指向的是下一条指令，
             // 已知 ecall 指令的长度为 4，所以这里需要加 4。
             trap_cx.sepc += 4;
-            trap_cx.x[10] =
+            let result =
                 syscall(trap_cx.x[17], [trap_cx.x[10], trap_cx.x[11], trap_cx.x[12]]) as usize;
+            // trap_cx 在执行 `exec` 被执行后会被回收，
+            // 所以这里需要重新获取一个新的 `trap_cx`。
+            trap_cx = processor::current_trap_cx();
+            trap_cx.x[10] = result
         }
         Trap::Exception(Exception::StoreFault)
         | Trap::Exception(Exception::StorePageFault)

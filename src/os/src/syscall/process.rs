@@ -1,4 +1,4 @@
-use crate::{task::{self, processor, manager}, timer};
+use crate::{task::{self, processor, manager}, timer, mm::page_table, loader};
 
 pub fn sys_exit(exit_code: i32) -> ! {
     println!("[kernel] Application exited with code {}", exit_code);
@@ -24,4 +24,14 @@ pub fn sys_fork() -> isize {
     manager::add_task(child_tcb);
 
     child_tcb.getpid() as isize
+}
+
+pub fn sys_exec(path: *const u8) -> isize {
+    let token = processor::current_user_token();
+    let path = page_table::translated_str(token, path);
+    if let Some(data) = loader::get_app_data_by_name(path.as_str()) {
+        processor::current_task().unwrap().exec(data);
+        return 0
+    }
+    -1
 }

@@ -1,8 +1,8 @@
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
 use bitflags::*;
 
 use super::{
-    address::{PhysPageNum, StepByOne, VirtAddr, VirtPageNum},
+    address::{PhysAddr, PhysPageNum, StepByOne, VirtAddr, VirtPageNum},
     frame_allocator::{frame_alloc, FrameTracker},
 };
 
@@ -150,6 +150,15 @@ impl PageTable {
         self.find_pte(vpn).map(|pte| *pte)
     }
 
+    fn translate_va(&self, va: VirtAddr) -> Option<PhysAddr> {
+        self.find_pte(va.clone().floor()).map(|pte| {
+            let phys_addr: PhysAddr = pte.ppn().into();
+            let phys_addr_usize: usize = phys_addr.into();
+            let page_offset = va.page_offset();
+            PhysAddr::from(phys_addr_usize + page_offset)
+        })
+    }
+
     // token 返回启用 SV39 分页机制且指向根页表地址的 satp 的 CSR 寄存器
     pub fn token(&self) -> usize {
         // 8usize << 60 表示启用 SV39 分页机制
@@ -158,8 +167,9 @@ impl PageTable {
     }
 }
 
-// 将 token 地址空间的数据保存到 Vec 缓冲区中
-// ptr 是 token 地址空间的虚拟地址
+// 将 token 地址空间的数据保存到 Vec 缓冲区中，ptr 是 token 地址空间的虚拟地址。
+// 一个页框本身是一个数组 `&'static mut [u8]`，如果 len 横跨多
+// 个页框，那么就整体的数据结果就是 `Vec<&'static mut [u8]>`。
 pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&'static mut [u8]> {
     let page_table = PageTable::from_token(token);
     let mut start = ptr as usize;
@@ -180,6 +190,33 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
         }
         start = end_va.into();
     }
-
     v
+}
+
+pub fn translated_str(token: usize, ptr: *const u8) -> String {
+    let page_table = PageTable::from_token(token);
+    let mut string = String::new();
+    let mut va = ptr as usize;
+
+    loop {
+        let ch: u8 = *(page_table
+            .translate_va(VirtAddr::from(va).into())
+            .unwrap()
+            .get_mut());
+        if ch == 0 {
+            break;
+        } else {
+            string.push(ch as char);
+            va += 1;
+        }
+    }
+    string
+}
+
+pub fn translated_ref_mut<T>(token: usize, ptr: *const u8) -> &'static mut T {
+    let page_table = PageTable::from_token(token);
+    page_table
+        .translate_va(VirtAddr::from(ptr as usize).into())
+        .unwrap()
+        .get_mut()
 }

@@ -45,6 +45,10 @@ impl PhysAddr {
     pub fn aligned(&self) -> bool {
         self.page_offset() == 0
     }
+
+    pub fn get_mut<T>(&self) -> &'static mut T {
+        unsafe { (self.0 as *mut T).as_mut().unwrap() }
+    }
 }
 
 impl PhysPageNum {
@@ -65,7 +69,7 @@ impl PhysPageNum {
 
     pub fn get_mut<T>(&self) -> &'static mut T {
         let pa: PhysAddr = (*self).into();
-        unsafe { (pa.0 as *mut T).as_mut().unwrap() }
+        unsafe { pa.get_mut() }
     }
 }
 
@@ -235,7 +239,7 @@ impl<T> IntoIterator for SimpleRange<T>
 where
     T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
-    type Item =  T;
+    type Item = T;
     type IntoIter = SimpleRangeIterator<T>;
 
     fn into_iter(self) -> Self::IntoIter {

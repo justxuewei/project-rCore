@@ -15,10 +15,11 @@ use crate::{
     mm::{
         self,
         address::{PhysPageNum, VirtAddr},
-        memory_set::{MapPermission, MemorySet},
+        memory_set::MemorySet,
+        KERNEL_SPACE,
     },
     sync::UPSafeCell,
-    trap::{trap_handler, TrapContext},
+    trap::{self, trap_handler, TrapContext},
 };
 
 pub struct TaskControlBlock {
@@ -111,7 +112,7 @@ impl TaskControlBlock {
 
     pub fn fork(self: &Arc<TaskControlBlock>) -> Arc<TaskControlBlock> {
         let mut parent_inner = self.inner_exclusive_access();
-        
+
         let pid_handle = pid::pid_alloc();
         let kernel_stack = pid::KernelStack::new(&pid_handle);
         let kernel_stack_top = kernel_stack.get_top();
@@ -148,7 +149,23 @@ impl TaskControlBlock {
     }
 
     pub fn exec(&self, elf_data: &[u8]) {
-        todo!()
+        let (mmset, user_sp, entrypoint) = MemorySet::from_elf(elf_data);
+        
+        let trap_cx_ppn = mmset
+            .translate(VirtAddr::from(config::TRAP_CONTEXT).into())
+            .unwrap()
+            .ppn();
+        let mut tcb_inner = self.inner_exclusive_access();
+        tcb_inner.memory_set = mmset;
+        tcb_inner.trap_cx_ppn = trap_cx_ppn;
+        let trap_cx = tcb_inner.get_trap_cx();
+        *trap_cx = TrapContext::app_init_context(
+            entrypoint,
+            user_sp,
+            KERNEL_SPACE.exclusive_access().token(),
+            self.kernel_stack.get_top(),
+            trap::trap_handler as usize,
+        );
     }
 }
 
