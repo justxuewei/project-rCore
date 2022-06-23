@@ -213,7 +213,7 @@ pub fn translated_str(token: usize, ptr: *const u8) -> String {
     string
 }
 
-pub fn translated_ref_mut<T>(token: usize, ptr: *const u8) -> &'static mut T {
+pub fn translated_ref_mut<T>(token: usize, ptr: *const T) -> &'static mut T {
     let page_table = PageTable::from_token(token);
     page_table
         .translate_va(VirtAddr::from(ptr as usize).into())

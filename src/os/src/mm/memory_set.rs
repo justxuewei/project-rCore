@@ -347,13 +347,13 @@ impl MemorySet {
 
     //  创建并拷贝一个已有用户地址空间 (memory_set)
     pub fn from_existed_user(user_space: &MemorySet) -> Self {
-        let memory_set = Self::new_bare();
+        let mut memory_set = Self::new_bare();
         memory_set.map_trampoline();
 
         for area in user_space.areas.iter() {
             let new_map_area = MapArea::from_another(area);
             memory_set.push(new_map_area, None);
-            for vpn in new_map_area.vpn_range {
+            for vpn in area.vpn_range {
                 let src_ppn = user_space.translate(vpn).unwrap().ppn();
                 let dst_ppn = memory_set.translate(vpn).unwrap().ppn();
                 dst_ppn.get_bytes_array().copy_from_slice(src_ppn.get_bytes_array());
@@ -375,5 +375,9 @@ impl MemorySet {
 
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
         self.page_table.translate(vpn)
+    }
+
+    pub fn release_areas(&mut self) {
+        self.areas.clear()
     }
 }

@@ -17,6 +17,9 @@ pub use context::TrapContext;
 
 global_asm!(include_str!("trap.S"));
 
+const MEM_FAULT: i32 = -2;
+const ILLEGAL_INSTRUCTION_FAULT: i32 = -3;
+
 pub fn init() {
     set_kernel_trap_entry();
 }
@@ -63,11 +66,11 @@ pub fn trap_handler() -> ! {
         | Trap::Exception(Exception::LoadFault)
         | Trap::Exception(Exception::LoadPageFault) => {
             println!("[kernel] PageFault in application, kernel killed it.");
-            task::exit_current_and_run_next(-1);
+            task::exit_current_and_run_next(MEM_FAULT);
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             println!("[kernel] IllegalInstruction in application, kernel killed it.");
-            task::exit_current_and_run_next(-1);
+            task::exit_current_and_run_next(ILLEGAL_INSTRUCTION_FAULT);
         }
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
             // println!("[kernel debug] time interrupt is fired");

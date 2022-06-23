@@ -74,10 +74,11 @@ impl TaskControlBlock {
 
         let pid_handle = pid::pid_alloc();
         let kernel_stack = pid::KernelStack::new(&pid_handle);
+        let kernel_stack_top = kernel_stack.get_top();
         let task_cx_block_inner = unsafe {
             UPSafeCell::new(TaskControlBlockInner {
                 task_status,
-                task_cx: TaskContext::goto_trap_return(kernel_stack.get_top()),
+                task_cx: TaskContext::goto_trap_return(kernel_stack_top),
                 memory_set,
                 trap_cx_ppn,
                 base_size: user_sp,
@@ -99,7 +100,7 @@ impl TaskControlBlock {
             entry_point,
             user_sp,
             mm::KERNEL_SPACE.exclusive_access().token(),
-            kernel_stack.get_top(),
+            kernel_stack_top,
             trap_handler as usize,
         );
 
@@ -173,6 +174,5 @@ impl TaskControlBlock {
 pub enum TaskStatus {
     Ready,
     Running,
-    Exited,
     Zombie,
 }

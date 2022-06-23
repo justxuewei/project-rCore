@@ -55,12 +55,14 @@ pub fn current_task() -> Option<Arc<TaskControlBlock>> {
 
 pub fn current_user_token() -> usize {
     let task = current_task().unwrap();
-    task.inner_exclusive_access().get_user_token()
+    let token = task.inner_exclusive_access().get_user_token();
+    token
 }
 
 pub fn current_trap_cx() -> &'static mut TrapContext {
     let task = current_task().unwrap();
-    task.inner_exclusive_access().get_trap_cx()
+    let trap_cx = task.inner_exclusive_access().get_trap_cx();
+    trap_cx
 }
 
 // 无限循环直至有一个 task 到来，此时使用 __switch 切换进程
@@ -83,9 +85,9 @@ pub fn run_tasks() {
 
 // 将当前任务 current_task_cx_ptr 切换为 idle 控制流
 pub fn schedule(current_task_cx_ptr: *mut TaskContext) {
-    let mut processer = PROCESSOR.exclusive_access();
-    let idle_task_cx_ptr = processer.get_idle_task_cx_ptr() as *const TaskContext;
-    drop(processer);
+    let mut processor = PROCESSOR.exclusive_access();
+    let idle_task_cx_ptr = processor.get_idle_task_cx_ptr() as *const TaskContext;
+    drop(processor);
 
     unsafe { __switch(current_task_cx_ptr, idle_task_cx_ptr) }
 }

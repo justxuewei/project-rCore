@@ -1,5 +1,3 @@
-use core::ptr;
-
 use crate::{
     config,
     mm::{address::VirtAddr, memory_set::MapPermission, KERNEL_SPACE},
@@ -76,6 +74,7 @@ impl KernelStack {
         KernelStack { pid: pid }
     }
 
+    #[allow(unused)]
     // push value 到 kernel stack
     pub fn push_on_top<T: Sized>(&self, value: T) -> *mut T {
         let size = core::mem::size_of::<T>();

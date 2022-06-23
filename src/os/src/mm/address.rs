@@ -69,7 +69,7 @@ impl PhysPageNum {
 
     pub fn get_mut<T>(&self) -> &'static mut T {
         let pa: PhysAddr = (*self).into();
-        unsafe { pa.get_mut() }
+        pa.get_mut()
     }
 }
 
