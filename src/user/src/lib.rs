@@ -39,8 +39,10 @@ fn main() -> i32 {
 use buddy_system_allocator::LockedHeap;
 use syscall::*;
 
-const ANY_PROCESS: isize = -1;
-const CHILDREN_RUNNING: isize = -2;
+const WAITPID_ANY_PID: isize = -1;
+
+pub const WAITPID_NO_CHILDREN_RUNNING: isize = -1;
+pub const WAITPID_CHILDREN_RUNNING: isize = -2;
 
 pub fn write(fd: usize, buf: &[u8]) -> isize {
     sys_write(fd, buf)
@@ -73,8 +75,8 @@ pub fn exec(path: &str) -> isize {
 // wait for all children to exit
 pub fn wait(exit_code: &mut i32) -> isize {
     loop {
-        match sys_waitpid(ANY_PROCESS, exit_code as *mut i32) {
-            CHILDREN_RUNNING => {
+        match sys_waitpid(WAITPID_ANY_PID, exit_code as *mut i32) {
+            WAITPID_CHILDREN_RUNNING => {
                 yield_();
             }
             // -1 or a real pid
@@ -87,7 +89,7 @@ pub fn wait(exit_code: &mut i32) -> isize {
 pub fn waitpid(pid: usize, exit_code: &mut i32) -> isize {
     loop {
         match sys_waitpid(pid as isize, exit_code as *mut _) {
-            CHILDREN_RUNNING => {
+            WAITPID_CHILDREN_RUNNING => {
                 yield_();
             }
             // -1 or a real pid

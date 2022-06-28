@@ -37,11 +37,10 @@ pub fn main() -> i32 {
                         }
                         unreachable!();
                     } else {
-                        println!("[user_shell debug] The pid of the new process \"{}\" is {}.", line, pid);
                         let mut exit_code: i32 = 0;
                         let exit_pid = waitpid(pid as usize, &mut exit_code);
                         assert_eq!(pid, exit_pid);
-                        println!("Shell: Process {} exited with code {}", pid, exit_code);
+                        println!("[user_shell] Process {} exited with code {}", pid, exit_code);
                     }
                     line.clear();
                 }
