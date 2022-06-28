@@ -356,7 +356,9 @@ impl MemorySet {
             for vpn in area.vpn_range {
                 let src_ppn = user_space.translate(vpn).unwrap().ppn();
                 let dst_ppn = memory_set.translate(vpn).unwrap().ppn();
-                dst_ppn.get_bytes_array().copy_from_slice(src_ppn.get_bytes_array());
+                dst_ppn
+                    .get_bytes_array()
+                    .copy_from_slice(src_ppn.get_bytes_array());
             }
         }
 

@@ -18,7 +18,7 @@ use user_lib::{exec, fork, waitpid};
 
 #[no_mangle]
 pub fn main() -> i32 {
-    println!("Rust user shell");
+    println!("[user_shell] Hello, welcome to the user shell!");
     let mut line: String = String::new();
     print!(">> ");
     loop {
@@ -37,6 +37,7 @@ pub fn main() -> i32 {
                         }
                         unreachable!();
                     } else {
+                        println!("[user_shell debug] The pid of the new process \"{}\" is {}.", line, pid);
                         let mut exit_code: i32 = 0;
                         let exit_pid = waitpid(pid as usize, &mut exit_code);
                         assert_eq!(pid, exit_pid);

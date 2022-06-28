@@ -67,20 +67,5 @@ app_{0}_end:"#,
         )?;
     }
 
-    for (idx, app) in apps.iter().enumerate() {
-        println!("app_{}: {}", idx, app);
-        writeln!(
-            f,
-            r#"
-    .section .data
-    .global app_name_{0}_start
-    .global app_name_{0}_end
-app_name_{0}_start:
-    .string "{1}"
-app_name_{0}_end:"#,
-            idx, app
-        )?;
-    }
-
     Ok(())
 }

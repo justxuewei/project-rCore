@@ -89,6 +89,7 @@ Ref: https://zhuanlan.zhihu.com/p/295439950
 - disable break 1: 禁用断点 1。
 - c: 执行直到碰到断点。
 - si: 单步执行一条汇编指令。
+- n: 执行下一行命令（类似于 step over）。
 
 ### ELF
 

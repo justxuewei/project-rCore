@@ -73,7 +73,6 @@ pub fn trap_handler() -> ! {
             task::exit_current_and_run_next(ILLEGAL_INSTRUCTION_FAULT);
         }
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
-            // println!("[kernel debug] time interrupt is fired");
             timer::set_next_trigger();
             task::suspend_current_and_run_next();
         }

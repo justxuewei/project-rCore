@@ -37,13 +37,10 @@ fn rust_main() -> ! {
 
     println!("[kernel] Welcome to rCore!");
     mm::init();
-    println!("[kernel] Initializing initproc.");
     task::add_initproc(); 
-    println!("[kernel] Initializing trap.");
     trap::init();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
-    println!("[kernel] Started run tasks.");
     task::run_tasks();
 
     panic!("Unreachable in rust_main")

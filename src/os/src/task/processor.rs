@@ -70,10 +70,6 @@ pub fn run_tasks() {
     loop {
         let mut processor = PROCESSOR.exclusive_access();
         if let Some(next_task) = manager::fetch_task() {
-            println!(
-                "[kernel] A new task will be executed, pid = {}",
-                next_task.getpid()
-            );
             let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
             let mut next_task_inner = next_task.inner_exclusive_access();
             let next_task_cx_ptr = &next_task_inner.task_cx as *const TaskContext;
@@ -82,7 +78,6 @@ pub fn run_tasks() {
             processor.current = Some(next_task);
             drop(processor);
 
-            println!("[kernel debug] Before run_tasks::__switch()");
             unsafe { __switch(idle_task_cx_ptr, next_task_cx_ptr) }
         }
     }
@@ -90,18 +85,9 @@ pub fn run_tasks() {
 
 // 将当前任务 current_task_cx_ptr 切换为 idle 控制流
 pub fn schedule(current_task_cx_ptr: *mut TaskContext) {
-    println!("[kernel debug] Scheduling to idle control flow.");
     let mut processor = PROCESSOR.exclusive_access();
     let idle_task_cx_ptr = processor.get_idle_task_cx_ptr() as *const TaskContext;
     drop(processor);
-
-    unsafe {
-        println!(
-            "[kernel debug] schedule: idle task cx: ra = {:#x}, sp = {:#x}",
-            (*idle_task_cx_ptr).ra,
-            (*idle_task_cx_ptr).sp
-        );
-    }
 
     unsafe { __switch(current_task_cx_ptr, idle_task_cx_ptr) }
 }

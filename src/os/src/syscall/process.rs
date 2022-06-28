@@ -32,14 +32,9 @@ pub fn sys_getpid() -> isize {
 }
 
 pub fn sys_fork() -> isize {
-    println!("[kernel debug] Started to fork a new process.");
     let parent_tcb = processor::current_task().unwrap();
     let child_tcb = parent_tcb.fork();
     let child_pid = child_tcb.getpid();
-    println!(
-        "[kernel debug] Forked a new process, pid = {}.",
-        child_tcb.getpid()
-    );
     let mut child_trap_cx = child_tcb.inner_exclusive_access().get_trap_cx();
     // child process's return value is 0
     child_trap_cx.x[10] = 0;
@@ -90,7 +85,7 @@ pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
         let child_pid = child.getpid();
         let exit_code = child.inner_exclusive_access().exit_code;
         *(page_table::translated_ref_mut(
-            child.inner_exclusive_access().get_user_token(),
+            current_task_inner.get_user_token(),
             exit_code_ptr,
         )) = exit_code;
         return child_pid as isize;

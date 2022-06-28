@@ -16,9 +16,16 @@ pub fn handle_alloc_error(layout: core::alloc::Layout) -> ! {
     panic!("Heap allocation error, layout = {:?}", layout);
 }
 
+const USER_HEAP_SIZE: usize = 16384;
+static mut HEAP_SPACE: [u8; USER_HEAP_SIZE] = [0; USER_HEAP_SIZE];
+
 #[no_mangle]
 #[link_section = ".text.entry"]
 pub extern "C" fn _start() -> ! {
+    unsafe {
+        HEAP.lock()
+            .init(HEAP_SPACE.as_ptr() as usize, USER_HEAP_SIZE);
+    }
     exit(main());
     panic!("unreachable after sys_exit!");
 }
