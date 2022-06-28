@@ -32,14 +32,20 @@ pub fn sys_getpid() -> isize {
 }
 
 pub fn sys_fork() -> isize {
+    println!("[kernel debug] Started to fork a new process.");
     let parent_tcb = processor::current_task().unwrap();
     let child_tcb = parent_tcb.fork();
+    let child_pid = child_tcb.getpid();
+    println!(
+        "[kernel debug] Forked a new process, pid = {}.",
+        child_tcb.getpid()
+    );
     let mut child_trap_cx = child_tcb.inner_exclusive_access().get_trap_cx();
     // child process's return value is 0
     child_trap_cx.x[10] = 0;
-    manager::add_task(child_tcb.clone());
+    manager::add_task(child_tcb);
 
-    child_tcb.getpid() as isize
+    child_pid as isize
 }
 
 pub fn sys_exec(path: *const u8) -> isize {
@@ -52,7 +58,6 @@ pub fn sys_exec(path: *const u8) -> isize {
     -1
 }
 
-// pid 为 -1 时表示关心所有子进程，pid >= 0 时表示只关心 pid 对应的子进程。
 // 返回数据有三种类型：
 // 1. 当关心的子进程处于 Zombie 状态时，返回该进程的 pid (pid >= 0)；
 // 2. 当关心的子进程都已经退出时，返回 NO_CHILDREN_RUNNING；
@@ -84,7 +89,10 @@ pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
         assert_eq!(Arc::strong_count(&child), 1);
         let child_pid = child.getpid();
         let exit_code = child.inner_exclusive_access().exit_code;
-        *(page_table::translated_ref_mut(child.inner_exclusive_access().get_user_token(), exit_code_ptr)) = exit_code;
+        *(page_table::translated_ref_mut(
+            child.inner_exclusive_access().get_user_token(),
+            exit_code_ptr,
+        )) = exit_code;
         return child_pid as isize;
     }
 

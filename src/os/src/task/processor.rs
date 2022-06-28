@@ -31,7 +31,7 @@ impl Processor {
         self.current.take()
     }
 
-    // 复制正在执行任务的 TCB
+    // 复制正在执行任务的 TCB，以克隆的方式传递，不会导致正在执行的 TCB 终止
     fn current(&self) -> Option<Arc<TaskControlBlock>> {
         self.current.as_ref().map(|ptr| Arc::clone(ptr))
     }
@@ -69,15 +69,20 @@ pub fn current_trap_cx() -> &'static mut TrapContext {
 pub fn run_tasks() {
     loop {
         let mut processor = PROCESSOR.exclusive_access();
-        if let Some(task) = manager::fetch_task() {
+        if let Some(next_task) = manager::fetch_task() {
+            println!(
+                "[kernel] A new task will be executed, pid = {}",
+                next_task.getpid()
+            );
             let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
-            let mut next_tcb_inner = task.inner_exclusive_access();
-            let next_task_cx_ptr = &next_tcb_inner.task_cx as *const TaskContext;
-            next_tcb_inner.task_status = TaskStatus::Running;
-            drop(next_tcb_inner);
-            processor.current = Some(task);
+            let mut next_task_inner = next_task.inner_exclusive_access();
+            let next_task_cx_ptr = &next_task_inner.task_cx as *const TaskContext;
+            next_task_inner.task_status = TaskStatus::Running;
+            drop(next_task_inner);
+            processor.current = Some(next_task);
             drop(processor);
 
+            println!("[kernel debug] Before run_tasks::__switch()");
             unsafe { __switch(idle_task_cx_ptr, next_task_cx_ptr) }
         }
     }
@@ -85,9 +90,18 @@ pub fn run_tasks() {
 
 // 将当前任务 current_task_cx_ptr 切换为 idle 控制流
 pub fn schedule(current_task_cx_ptr: *mut TaskContext) {
+    println!("[kernel debug] Scheduling to idle control flow.");
     let mut processor = PROCESSOR.exclusive_access();
     let idle_task_cx_ptr = processor.get_idle_task_cx_ptr() as *const TaskContext;
     drop(processor);
+
+    unsafe {
+        println!(
+            "[kernel debug] schedule: idle task cx: ra = {:#x}, sp = {:#x}",
+            (*idle_task_cx_ptr).ra,
+            (*idle_task_cx_ptr).sp
+        );
+    }
 
     unsafe { __switch(current_task_cx_ptr, idle_task_cx_ptr) }
 }

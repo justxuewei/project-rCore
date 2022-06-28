@@ -30,6 +30,7 @@ pub fn add_initproc() {
 
 // 暂停当前任务并切换为 idle 控制流
 pub fn suspend_current_and_run_next() {
+    println!("[kernel debug] suspend_current_and_run_next");
     let current_task = processor::take_current_task().unwrap();
     let mut current_task_inner = current_task.inner_exclusive_access();
     current_task_inner.task_status = TaskStatus::Ready;

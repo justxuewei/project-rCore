@@ -1,11 +1,20 @@
 #![no_std]
 #![feature(linkage)]
 #![feature(panic_info_message)]
+#![feature(alloc_error_handler)]
 
 #[macro_use]
 pub mod console;
 mod lang_items;
 mod syscall;
+
+#[global_allocator]
+static HEAP: LockedHeap = LockedHeap::empty();
+
+#[alloc_error_handler]
+pub fn handle_alloc_error(layout: core::alloc::Layout) -> ! {
+    panic!("Heap allocation error, layout = {:?}", layout);
+}
 
 #[no_mangle]
 #[link_section = ".text.entry"]
@@ -20,6 +29,7 @@ fn main() -> i32 {
     panic!("Cannot find main!");
 }
 
+use buddy_system_allocator::LockedHeap;
 use syscall::*;
 
 const ANY_PROCESS: isize = -1;

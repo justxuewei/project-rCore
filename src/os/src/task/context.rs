@@ -5,9 +5,12 @@ use crate::trap::trap_return;
 // TaskContext 存放进程切换上下文（主要内容为 callee registers）
 pub struct TaskContext {
     // return address
-    ra: usize,
+    // TODO(justxuewei): debug
+    // ra: usize,
+    pub ra: usize,
     // kernel stack
-    sp: usize,
+    pub sp: usize,
+    // sp: usize,
     // called saved registers
     s: [usize; 12],
 }
