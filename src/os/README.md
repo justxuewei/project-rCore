@@ -79,12 +79,17 @@ Ref: https://zhuanlan.zhihu.com/p/295439950
 - x/10i 0x80000000 : 显示 0x80000000 处的10条汇编指令。
 - x/10i $pc : 显示即将执行的10条汇编指令。
 - x/10xw 0x80000000 : 显示 0x80000000 处的10条数据，格式为16进制32bit。
-- info register: 显示当前所有寄存器信息。
-- info r t0: 显示 t0 寄存器的值。
-- break funcname: 在目标函数第一条指令处设置断点。
-- break *0x80200000: 在 0x80200000 处设置断点。
-- continue: 执行直到碰到断点。
+- i r: 显示当前所有寄存器信息。
+- i r t0: 显示 t0 寄存器的值。
+- b func_name: 在目标函数第一条指令处设置断点。
+- b *0x80200000: 在 0x80200000 处设置断点。
+- b src/task/processor.rs:85: 在文件 src/task/processor.rs 的 85 行设置断点 (ps: 这个地方有点疑惑的是有的时候某些行无法设置断点)。
+- p *variable: 查看 variable 变量结构体内容。
+- i b: 查看目前所有的断点。
+- disable break 1: 禁用断点 1。
+- c: 执行直到碰到断点。
 - si: 单步执行一条汇编指令。
+- n: 执行下一行命令（类似于 step over）。
 
 ### ELF
 

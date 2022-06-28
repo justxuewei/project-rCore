@@ -4,6 +4,8 @@ Yet another rCore implementation by justxuewei, the original version you may ref
 
 ## Contents
 
+In this repo:
+
 - [os](./src/os): rCore operatering system running on riscv64.
 - [user](./src/user): user applications.
 - ch1-exercises
@@ -14,6 +16,10 @@ Yet another rCore implementation by justxuewei, the original version you may ref
   - get-task-info: implemented at [os: syscall/task_info.rs](./src/os/src/syscall/task_info.rs) and [user: 05get_task_info.rs](./src/user/src/bin/05get_task_info.rs).
   - app-elapsed-time: implemented at [batch::app_running_time](./src/os/src/batch.rs). 
   - syscall-times: implemented at [batch::stat_syscall](./src/os/src/batch.rs). 
+
+Reviews (in chinese):
+
+- [address space](https://nxw.name/2022/address-space-introduction)
 
 ## Tips
 

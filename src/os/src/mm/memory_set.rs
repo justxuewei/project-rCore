@@ -71,7 +71,19 @@ impl MapArea {
         }
     }
 
-    // map_one 将一个 vpn 和 ppn 的映射关系保存到 page table 中
+    // 拷贝一个与 `map_area` 一样长度和位置的虚拟地址空间，
+    // 但是不拷贝页框数据。
+    pub fn from_another(map_area: &MapArea) -> Self {
+        Self {
+            vpn_range: VPNRange::new(map_area.vpn_range.get_start(), map_area.vpn_range.get_end()),
+            data_frames: BTreeMap::new(),
+            map_type: map_area.map_type,
+            map_perm: map_area.map_perm,
+        }
+    }
+
+    // map_one 为一个 vpn 申请一个物理页框，
+    // 将 vpn 和 ppn 的映射关系保存到 page table 中。
     pub fn map_one(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
         let ppn: PhysPageNum;
         match self.map_type {
@@ -163,6 +175,19 @@ impl MemorySet {
         );
     }
 
+    // 从 memory_set 中移除一个指定的 map_area
+    pub fn remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum) {
+        if let Some((idx, area)) = self
+            .areas
+            .iter_mut()
+            .enumerate()
+            .find(|(_, area)| area.vpn_range.get_start() == start_vpn)
+        {
+            area.unmap(&mut self.page_table);
+            self.areas.remove(idx);
+        }
+    }
+
     // push 将逻辑段内容映射到物理内存中，如果有数据则深拷贝数据，最后将 map_area 保存到 mmset 中。
     fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
         map_area.map(&mut self.page_table);
@@ -246,7 +271,7 @@ impl MemorySet {
     // 完成的事情包括验证 elf 文件是否合法，根据 program headers 加载数据的逻辑段，
     // 设置 user stack，以及设置 trap context 地址。
     // returns:
-    //  - mmset
+    //  - memory_set
     //  - user stack 栈顶虚拟地址
     //  - app 入口地址
     pub fn from_elf(elf_data: &[u8]) -> (Self, usize, usize) {
@@ -320,6 +345,26 @@ impl MemorySet {
         )
     }
 
+    //  创建并拷贝一个已有用户地址空间 (memory_set)
+    pub fn from_existed_user(user_space: &MemorySet) -> Self {
+        let mut memory_set = Self::new_bare();
+        memory_set.map_trampoline();
+
+        for area in user_space.areas.iter() {
+            let new_map_area = MapArea::from_another(area);
+            memory_set.push(new_map_area, None);
+            for vpn in area.vpn_range {
+                let src_ppn = user_space.translate(vpn).unwrap().ppn();
+                let dst_ppn = memory_set.translate(vpn).unwrap().ppn();
+                dst_ppn
+                    .get_bytes_array()
+                    .copy_from_slice(src_ppn.get_bytes_array());
+            }
+        }
+
+        memory_set
+    }
+
     // activate 设置根页表地址并启用 SV39 分页
     pub fn activate(&self) {
         let satp = self.page_table.token();
@@ -332,5 +377,9 @@ impl MemorySet {
 
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
         self.page_table.translate(vpn)
+    }
+
+    pub fn release_areas(&mut self) {
+        self.areas.clear()
     }
 }

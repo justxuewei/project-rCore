@@ -1,9 +1,10 @@
-use super::write;
+use super::{write, read};
 use core::fmt::{self, Write};
 
 struct Stdout;
 
 // standard output (screen)
+const STDIN: usize = 0;
 const STDOUT: usize = 1;
 
 impl Write for Stdout {
@@ -29,4 +30,10 @@ macro_rules! println {
     ($fmt: literal $(, $($arg: tt)+)?) => {
         $crate::console::print(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));
     }
+}
+
+pub fn getchar() -> u8 {
+    let mut c = [0u8; 1];
+    read(STDIN, &mut c);
+    c[0]
 }
