@@ -12,6 +12,15 @@ lazy_static! {
         Mutex::new(BlockCacheManager::new());
 }
 
+pub fn get_block_cache(
+    block_id: usize,
+    block_device: Arc<dyn BlockDevice>,
+) -> Arc<Mutex<BlockCache>> {
+    BLOCK_CACHE_MANAGER
+        .lock()
+        .get_block_cache(block_id, block_device)
+}
+
 pub struct BlockCache {
     cache: [u8; BLOCK_SIZE],
     block_id: usize,
