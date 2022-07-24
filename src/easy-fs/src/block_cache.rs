@@ -4,6 +4,7 @@ use spin::Mutex;
 
 use crate::block_dev::BlockDevice;
 
+// 一个 block 的长度是 512B
 pub const BLOCK_SIZE: usize = 512;
 const BLOCK_CACHE_SIZE: usize = 16;
 
