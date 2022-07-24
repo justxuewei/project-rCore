@@ -134,7 +134,8 @@ impl DiskInode {
             total += 1;
         } else if data_blocks > INDIRECT1_BOUND {
             total += 2;
-            total += (data_blocks - INDIRECT1_BOUND + INODE_INDIRECT1_COUNT - 1) / INODE_INDIRECT1_COUNT;
+            total +=
+                (data_blocks - INDIRECT1_BOUND + INODE_INDIRECT1_COUNT - 1) / INODE_INDIRECT1_COUNT;
         }
         total as u32
     }
@@ -153,7 +154,12 @@ impl DiskInode {
     // [0, ..., 27, <indirect1(0) block id>, ..., <indirect2 block id>, ...,
     // <indirect1(1) block id>, ...]，
     // 其中 indirect1(x) 表示第 x 个 indirect1 block id
-    pub fn increase_size(&mut self, new_size: u32, new_blocks: Vec<u32>, block_device: Arc<dyn BlockDevice>) {
+    pub fn increase_size(
+        &mut self,
+        new_size: u32,
+        new_blocks: Vec<u32>,
+        block_device: Arc<dyn BlockDevice>,
+    ) {
         let mut current_blocks = self.data_blocks();
         self.size = new_size;
         let mut total_blocks = self.data_blocks();
